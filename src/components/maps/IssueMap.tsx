@@ -1,7 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { Loader } from '@googlemaps/js-api-loader';
 import { useIssues, IssueCategory, IssueStatus } from '@/contexts/IssueContext';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -9,13 +8,10 @@ import { Plus, Filter, Layers } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import IssueFilterControl from './IssueFilterControl';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
 
-// Mapbox requires a token - we'll use a public token for demonstration
-// This is a placeholder token - for production, users would need their own
-mapboxgl.accessToken = 'pk.eyJ1IjoiZGl2eWFuc2g0IiwiYSI6ImNscHY3OGI5MDAxYm4ya3MyeGsxOHNwYmQifQ.JT-wu0fKnBdwtfbO0xt-PA';
-
-// Ayodhya coordinates - explicitly typed as [number, number] for LngLatLike
-const AYODHYA_COORDINATES: [number, number] = [82.1998, 26.7922];
+// Ayodhya coordinates
+const AYODHYA_COORDINATES = { lat: 26.7922, lng: 82.1998 };
 
 interface IssueMapProps {
   onIssueSelect?: (issueId: string) => void;
@@ -29,7 +25,8 @@ const IssueMap: React.FC<IssueMapProps> = ({
   enableFilters = true
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const { issues } = useIssues();
   const { user } = useAuth();
   const [selectedFilters, setSelectedFilters] = useState<{
@@ -38,6 +35,7 @@ const IssueMap: React.FC<IssueMapProps> = ({
   }>({});
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
 
   // Filter issues based on the selected filters
   const filteredIssues = issues.filter((issue) => {
@@ -50,154 +48,148 @@ const IssueMap: React.FC<IssueMapProps> = ({
     return true;
   });
 
-  // Initialize map when component mounts
+  // Initialize Google Maps when component mounts
   useEffect(() => {
-    if (!map.current && mapContainer.current) {
-      try {
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/streets-v12',
-          center: AYODHYA_COORDINATES,
-          zoom: 13.5,
-          attributionControl: false,
-          pitchWithRotate: false,
-          dragRotate: false,
-        });
+    const initializeMap = async () => {
+      if (!apiKey) return;
+      
+      if (!map.current && mapContainer.current) {
+        try {
+          const loader = new Loader({
+            apiKey: apiKey,
+            version: "weekly",
+            libraries: ["places", "geometry"]
+          });
 
-        // Add navigation controls (zoom only for Google Maps-like feel)
-        const navControl = new mapboxgl.NavigationControl({ showCompass: false });
-        map.current.addControl(navControl, 'bottom-right');
+          const { Map } = await loader.importLibrary("maps") as any;
+          const { AdvancedMarkerElement } = await loader.importLibrary("marker") as any;
 
-        // Add geolocate control
-        const geolocate = new mapboxgl.GeolocateControl({
-          positionOptions: {
-            enableHighAccuracy: true,
-          },
-          trackUserLocation: true,
-          showUserHeading: true,
-        });
-        map.current.addControl(geolocate, 'bottom-right');
+          map.current = new Map(mapContainer.current, {
+            center: AYODHYA_COORDINATES,
+            zoom: 14,
+            mapId: "DEMO_MAP_ID",
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+          });
 
-        map.current.on('load', () => {
           setMapLoaded(true);
-          
-          // Add custom Google Maps-like styling
-          if (map.current) {
-            // Add attribution in Google Maps style
-            const attribution = document.createElement('div');
-            attribution.className = 'absolute bottom-0 right-0 bg-white px-2 py-1 text-xs text-gray-600 z-10';
-            attribution.textContent = '© Mapbox © OpenStreetMap';
-            mapContainer.current?.appendChild(attribution);
-            
-            // Add marker for Ayodhya city center
-            new mapboxgl.Marker({ color: "#FF0000" })
-              .setLngLat(AYODHYA_COORDINATES)
-              .setPopup(
-                new mapboxgl.Popup({ 
-                  offset: 25,
-                  closeButton: false,
-                })
-                  .setHTML(`
-                    <div class="p-2">
-                      <h3 class="font-sans text-sm font-medium text-gray-900">Ayodhya</h3>
-                      <p class="text-xs text-gray-600 mt-1">City Center</p>
-                    </div>
-                  `)
-              )
-              .addTo(map.current);
-          }
-        });
+          setMapError(null);
 
-        // Handle map errors
-        map.current.on('error', (e) => {
-          console.error('Mapbox error:', e.error);
-          setMapError('Failed to load map. Please check your connection or try again later.');
-        });
+          // Add city center marker
+          const cityMarker = new AdvancedMarkerElement({
+            map: map.current,
+            position: AYODHYA_COORDINATES,
+            title: "Ayodhya City Center"
+          });
 
-      } catch (error) {
-        console.error('Error initializing map:', error);
-        setMapError('Failed to initialize map. Please check your connection or try again later.');
+        } catch (error) {
+          console.error('Error initializing Google Maps:', error);
+          setMapError('Failed to initialize map. Please check your API key and connection.');
+        }
       }
-    }
+    };
+
+    initializeMap();
 
     // Clean up on unmount
     return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
+      markersRef.current.forEach(marker => {
+        marker.setMap(null);
+      });
+      markersRef.current = [];
     };
-  }, []);
+  }, [apiKey]);
 
   // Add markers when issues or filters change
   useEffect(() => {
-    if (!map.current || !mapLoaded) return;
+    const addMarkers = async () => {
+      if (!map.current || !mapLoaded || !apiKey) return;
 
-    // Clear existing markers (except the Ayodhya center marker)
-    const existingMarkers = document.querySelectorAll('.mapboxgl-marker:not(:first-child)');
-    existingMarkers.forEach(marker => marker.remove());
+      // Clear existing markers
+      markersRef.current.forEach(marker => {
+        marker.setMap(null);
+      });
+      markersRef.current = [];
 
-    // Add filtered markers
-    filteredIssues.forEach((issue) => {
-      // Create a marker element
-      const markerEl = document.createElement('div');
-      markerEl.className = 'relative';
+      const loader = new Loader({
+        apiKey: apiKey,
+        version: "weekly",
+        libraries: ["marker"]
+      });
 
-      // Create Google Maps-like marker pin
-      const pin = document.createElement('div');
-      pin.className = 'w-6 h-6 rounded-full flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 shadow-md';
-      
-      // Set color based on issue status with Google Maps-like colors
-      switch (issue.status) {
-        case 'open':
-          pin.classList.add('bg-red-500'); // Google Maps red
-          break;
-        case 'in_progress':
-          pin.classList.add('bg-amber-500'); // Google Maps yellow
-          break;
-        case 'resolved':
-          pin.classList.add('bg-green-600'); // Google Maps green
-          break;
-        default:
-          pin.classList.add('bg-blue-500'); // Google Maps blue
-      }
+      const { AdvancedMarkerElement } = await loader.importLibrary("marker") as any;
+      const { InfoWindow } = await loader.importLibrary("maps") as any;
 
-      // Add inner dot with pulsing effect for Google Maps feel
-      const dot = document.createElement('div');
-      dot.className = 'w-3 h-3 bg-white rounded-full';
-      pin.appendChild(dot);
-      
-      markerEl.appendChild(pin);
+      // Add markers for filtered issues
+      filteredIssues.forEach((issue) => {
+        // Create marker element
+        const markerEl = document.createElement('div');
+        markerEl.className = 'relative cursor-pointer';
+        markerEl.style.width = '24px';
+        markerEl.style.height = '24px';
 
-      // Create and add the marker with Google Maps-like popup
-      const marker = new mapboxgl.Marker(markerEl)
-        .setLngLat([issue.location.longitude, issue.location.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ 
-            offset: 25,
-            closeButton: false, // Google Maps popups don't have close buttons
-            className: 'google-maps-popup' // For custom styling
-          })
-            .setHTML(`
-              <div class="p-2">
-                <h3 class="font-sans text-sm font-medium text-gray-900">${issue.title}</h3>
-                <p class="text-xs text-gray-600 mt-1">${issue.category.replace('_', ' ')}</p>
-                <div class="mt-2 text-right">
-                  <a href="/issue/${issue.id}" class="text-sm font-medium text-blue-600">View details</a>
-                </div>
-              </div>
-            `)
-        )
-        .addTo(map.current!);
+        // Create colored pin
+        const pin = document.createElement('div');
+        pin.className = 'w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-white';
+        
+        // Set color based on issue status
+        switch (issue.status) {
+          case 'open':
+            pin.style.backgroundColor = '#ef4444'; // red-500
+            break;
+          case 'in_progress':
+            pin.style.backgroundColor = '#f59e0b'; // amber-500
+            break;
+          case 'resolved':
+            pin.style.backgroundColor = '#16a34a'; // green-600
+            break;
+          default:
+            pin.style.backgroundColor = '#3b82f6'; // blue-500
+        }
 
-      // Add click handler if onIssueSelect is provided
-      if (onIssueSelect) {
-        markerEl.addEventListener('click', () => {
-          onIssueSelect(issue.id);
+        // Add inner white dot
+        const dot = document.createElement('div');
+        dot.className = 'w-2 h-2 bg-white rounded-full';
+        pin.appendChild(dot);
+        markerEl.appendChild(pin);
+
+        const marker = new AdvancedMarkerElement({
+          map: map.current,
+          position: { lat: issue.location.latitude, lng: issue.location.longitude },
+          content: markerEl,
+          title: issue.title
         });
-      }
-    });
-  }, [issues, filteredIssues, mapLoaded, onIssueSelect]);
+
+        // Create info window
+        const infoWindow = new InfoWindow({
+          content: `
+            <div class="p-2">
+              <h3 class="font-medium text-gray-900 text-sm">${issue.title}</h3>
+              <p class="text-xs text-gray-600 mt-1">${issue.category.replace('_', ' ')}</p>
+              <div class="mt-2 text-right">
+                <a href="/issue/${issue.id}" class="text-sm font-medium text-blue-600">View details</a>
+              </div>
+            </div>
+          `
+        });
+
+        // Add click listeners
+        markerEl.addEventListener('click', () => {
+          infoWindow.open(map.current, marker);
+          if (onIssueSelect) {
+            onIssueSelect(issue.id);
+          }
+        });
+
+        markersRef.current.push(marker);
+      });
+    };
+
+    addMarkers();
+  }, [issues, filteredIssues, mapLoaded, onIssueSelect, apiKey]);
 
   const handleFilterChange = (filters: { category?: IssueCategory; status?: IssueStatus }) => {
     setSelectedFilters(filters);
@@ -205,91 +197,90 @@ const IssueMap: React.FC<IssueMapProps> = ({
 
   return (
     <div className={`relative ${height} w-full`}>
-      <div ref={mapContainer} className="h-full w-full" />
-      
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75">
-          <div className="bg-white p-4 rounded shadow-lg text-center">
-            <p className="text-red-500 mb-2">{mapError}</p>
-            <p className="text-sm text-gray-600">Please check your internet connection or try again later.</p>
+      {!apiKey && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-20">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Google Maps API Key Required</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please enter your Google Maps API key to display the map. 
+              Get your key from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Google Cloud Console</a>.
+            </p>
+            <Input
+              type="text"
+              placeholder="Enter your Google Maps API key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="mb-3"
+            />
+            <p className="text-xs text-gray-500">
+              Your API key is stored locally and not sent to our servers.
+            </p>
           </div>
         </div>
       )}
       
-      {/* Google Maps-like controls */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {enableFilters && (
-          <Drawer>
-            <DrawerTrigger asChild>
-              <Button variant="outline" className="bg-white shadow-md border-0 hover:bg-gray-100">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter Issues
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <div className="p-4 max-w-md mx-auto">
-                <h3 className="text-lg font-semibold mb-4">Filter Issues</h3>
-                <IssueFilterControl onChange={handleFilterChange} />
-              </div>
-            </DrawerContent>
-          </Drawer>
-        )}
-        
-        {user && (
-          <Link to="/report">
-            <Button className="bg-white text-gray-700 hover:bg-gray-100 shadow-md border-0">
-              <Plus className="h-4 w-4 mr-2" />
-              Report Issue
-            </Button>
-          </Link>
-        )}
-
-        {/* Google Maps-like layer selector */}
-        <Button variant="outline" className="bg-white shadow-md border-0 hover:bg-gray-100 mt-4">
-          <Layers className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Status indicator - Google Maps style */}
-      <div className="absolute bottom-8 left-4 z-10 bg-white rounded-md shadow-md p-3">
-        <div className="text-xs font-medium text-gray-500 mb-2">Issue Status:</div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <span className="text-xs text-gray-700">Open</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-            <span className="text-xs text-gray-700">In Progress</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-600"></div>
-            <span className="text-xs text-gray-700">Resolved</span>
+      <div ref={mapContainer} className="h-full w-full" />
+      
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 z-10">
+          <div className="bg-white p-4 rounded shadow-lg text-center">
+            <p className="text-red-500 mb-2">{mapError}</p>
+            <p className="text-sm text-gray-600">Please check your API key and internet connection.</p>
           </div>
         </div>
-      </div>
+      )}
+      
+      {/* Google Maps controls */}
+      {mapLoaded && (
+        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+          {enableFilters && (
+            <Drawer>
+              <DrawerTrigger asChild>
+                <Button variant="outline" className="bg-white shadow-md border-0 hover:bg-gray-100">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter Issues
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <div className="p-4 max-w-md mx-auto">
+                  <h3 className="text-lg font-semibold mb-4">Filter Issues</h3>
+                  <IssueFilterControl onChange={handleFilterChange} />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          )}
+          
+          {user && (
+            <Link to="/report">
+              <Button className="bg-white text-gray-700 hover:bg-gray-100 shadow-md border-0">
+                <Plus className="h-4 w-4 mr-2" />
+                Report Issue
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
 
-      {/* Google-style CSS */}
-      <style>
-        {`
-        .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right {
-          bottom: 16px;
-        }
-        .mapboxgl-ctrl-group {
-          border-radius: 8px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .mapboxgl-ctrl-group button {
-          width: 32px;
-          height: 32px;
-        }
-        .google-maps-popup .mapboxgl-popup-content {
-          border-radius: 8px;
-          padding: 0;
-          box-shadow: 0 2px 7px 1px rgba(0,0,0,0.3);
-        }
-        `}
-      </style>
+      {/* Status indicator */}
+      {mapLoaded && (
+        <div className="absolute bottom-8 left-4 z-10 bg-white rounded-md shadow-md p-3">
+          <div className="text-xs font-medium text-gray-500 mb-2">Issue Status:</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <span className="text-xs text-gray-700">Open</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+              <span className="text-xs text-gray-700">In Progress</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-600"></div>
+              <span className="text-xs text-gray-700">Resolved</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
