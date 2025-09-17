@@ -1,1 +1,4 @@
 project_id = "hgpjllatmfovmcnrbrtq"
+
+[functions.google-vision-verify]
+verify_jwt = false

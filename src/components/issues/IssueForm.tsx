@@ -18,7 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Camera, X, CheckCircle, AlertTriangle } from "lucide-react";
-import { ImageVerificationService } from "@/services/imageVerification";
+import { GoogleVisionService as ImageVerificationService } from "@/services/googleVisionService";
 
 // Google Maps imports
 import { Loader } from '@googlemaps/js-api-loader';
