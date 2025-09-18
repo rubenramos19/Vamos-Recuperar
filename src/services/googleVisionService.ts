@@ -58,12 +58,12 @@ export class GoogleVisionService {
       });
 
       if (error) {
-        console.error('Edge function error:', error);
-        console.log('Falling back to local image verification');
-        
-        // Fallback to local verification from old service
-        const { ImageVerificationService: LocalVerificationService } = await import("@/services/imageVerification");
-        return await LocalVerificationService.verifyImage(imageDataUrl, description, category);
+        console.error('Google Vision API error:', error);
+        return {
+          isValid: false,
+          confidence: 0,
+          reason: `Google Vision API failed: ${error.message}`
+        };
       }
 
       const result: VerificationResult = data;
@@ -78,20 +78,11 @@ export class GoogleVisionService {
 
     } catch (error) {
       console.error('Google Vision verification error:', error);
-      console.log('Falling back to local image verification');
-      
-      try {
-        // Fallback to local verification
-        const { ImageVerificationService: LocalVerificationService } = await import("@/services/imageVerification");
-        return await LocalVerificationService.verifyImage(imageDataUrl, description, category);
-      } catch (fallbackError) {
-        console.error('Fallback verification also failed:', fallbackError);
-        return {
-          isValid: false,
-          confidence: 0,
-          reason: 'Both Google Vision and local verification failed'
-        };
-      }
+      return {
+        isValid: false,
+        confidence: 0,
+        reason: `Google Vision verification failed: ${error.message}`
+      };
     }
   }
 
