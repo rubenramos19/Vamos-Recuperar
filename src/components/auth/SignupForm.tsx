@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { Mail, Phone, Chrome } from "lucide-react";
+import PhoneLoginForm from "./PhoneLoginForm";
 
 const SignupForm = () => {
   const [name, setName] = useState("");
@@ -14,7 +17,8 @@ const SignupForm = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signup } = useAuth();
+  const [showPhoneSignup, setShowPhoneSignup] = useState(false);
+  const { signup, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -42,16 +46,58 @@ const SignupForm = () => {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      // Error is already handled in the signInWithGoogle function
+    }
+  };
+
+  if (showPhoneSignup) {
+    return <PhoneLoginForm onBack={() => setShowPhoneSignup(false)} />;
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Create an Account</CardTitle>
         <CardDescription>
-          Sign up to start reporting and tracking issues in your community
+          Choose your preferred signup method
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Button
+            variant="outline"
+            onClick={handleGoogleSignup}
+            className="w-full"
+          >
+            <Chrome className="mr-2 h-4 w-4" />
+            Google
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowPhoneSignup(true)}
+            className="w-full"
+          >
+            <Phone className="mr-2 h-4 w-4" />
+            Phone
+          </Button>
+        </div>
+        
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator className="w-full" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with email
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input
@@ -97,17 +143,16 @@ const SignupForm = () => {
             />
           </div>
 
-          <div className="pt-2">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating account..." : "Create Account"}
-            </Button>
-          </div>
-        </CardContent>
-      </form>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            {isSubmitting ? "Creating account..." : "Create Account"}
+          </Button>
+        </form>
+      </CardContent>
       <CardFooter>
         <p className="text-sm text-center w-full text-muted-foreground">
           Already have an account?{" "}

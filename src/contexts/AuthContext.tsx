@@ -17,6 +17,9 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  verifyOtp: (phone: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: () => boolean;
 }
@@ -137,6 +140,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithGoogle = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      toast({
+        title: "Google sign in failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithPhone = async (phone: string): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithOtp({
+        phone: phone,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "OTP sent",
+        description: "Please check your phone for the verification code.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Phone sign in failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (phone: string, token: string): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: token,
+        type: 'sms'
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Phone verified successfully",
+        description: "Welcome to CivicSpot!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -168,6 +255,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     login,
     signup,
+    signInWithGoogle,
+    signInWithPhone,
+    verifyOtp,
     logout,
     isAdmin,
   };
