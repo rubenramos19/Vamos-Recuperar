@@ -30,21 +30,6 @@ const LoginForm = () => {
     }
   };
 
-  const handleDemoLogin = async (role: "admin" | "user") => {
-    setIsSubmitting(true);
-    try {
-      if (role === "admin") {
-        await login("admin@civicspot.com", "password123");
-      } else {
-        await login("user@civicspot.com", "password123");
-      }
-      navigate("/");
-    } catch (error) {
-      // Error is already handled in the login function
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -97,35 +82,6 @@ const LoginForm = () => {
             </Button>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or continue with demo accounts
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleDemoLogin("user")}
-              disabled={isSubmitting}
-            >
-              Demo User
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleDemoLogin("admin")}
-              disabled={isSubmitting}
-            >
-              Demo Admin
-            </Button>
-          </div>
         </CardContent>
       </form>
       <CardFooter>

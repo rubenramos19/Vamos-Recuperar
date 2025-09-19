@@ -1,84 +1,95 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
-type User = {
+type AuthUser = {
   id: string;
-  name: string;
   email: string;
+  name?: string;
   role: "reporter" | "admin";
 } | null;
 
 interface AuthContextType {
-  user: User;
+  user: AuthUser;
+  session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock data for demonstration
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Admin User",
-    email: "admin@civicspot.com",
-    password: "password123",
-    role: "admin" as const,
-  },
-  {
-    id: "2",
-    name: "Regular User",
-    email: "user@civicspot.com",
-    password: "password123",
-    role: "reporter" as const,
-  },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(null);
+  const [user, setUser] = useState<AuthUser>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check for saved user on initial load
+  // Set up auth state listener and get initial session
   useEffect(() => {
-    const savedUser = localStorage.getItem("civicspot_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        if (session?.user) {
+          // Convert Supabase user to our AuthUser type
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.user_metadata?.full_name,
+            role: session.user.user_metadata?.role || 'reporter'
+          });
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.user_metadata?.full_name,
+          role: session.user.user_metadata?.role || 'reporter'
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setLoading(true);
       
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const foundUser = MOCK_USERS.find(u => u.email === email && u.password === password);
-      
-      if (!foundUser) {
-        throw new Error("Invalid email or password");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
       }
-      
-      // Remove password before storing the user
-      const { password: _, ...secureUser } = foundUser;
-      
-      localStorage.setItem("civicspot_user", JSON.stringify(secureUser));
-      setUser(secureUser);
-      
+
       toast({
         title: "Logged in successfully",
-        description: `Welcome back, ${secureUser.name}!`,
+        description: `Welcome back!`,
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
       throw error;
@@ -91,33 +102,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const redirectUrl = `${window.location.origin}/`;
       
-      // Check if user already exists
-      if (MOCK_USERS.some(u => u.email === email)) {
-        throw new Error("Email already in use");
-      }
-      
-      // In a real app, we would create the user in the database
-      const newUser = {
-        id: String(MOCK_USERS.length + 1),
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        role: "reporter" as const,
-      };
-      
-      localStorage.setItem("civicspot_user", JSON.stringify(newUser));
-      setUser(newUser);
-      
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: name,
+            full_name: name,
+            role: 'reporter'
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Account created",
-        description: "Welcome to CivicSpot!",
+        description: "Welcome to CivicSpot! Please check your email to verify your account.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Signup failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error.message || "An unknown error occurred",
         variant: "destructive",
       });
       throw error;
@@ -126,13 +137,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("civicspot_user");
-    setUser(null);
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    });
+  const logout = async (): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   const isAdmin = () => {
@@ -141,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
+    session,
     loading,
     login,
     signup,
