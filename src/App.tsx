@@ -15,6 +15,7 @@ import Report from "./pages/Report";
 import IssuePage from "./pages/IssuePage";
 import MyReports from "./pages/MyReports";
 import Admin from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
 import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -42,6 +43,7 @@ const App = () => (
                   <Route path="/report" element={<Report />} />
                   <Route path="/issue/:id" element={<IssuePage />} />
                   <Route path="/my-reports" element={<MyReports />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/privacy" element={<Privacy />} />
