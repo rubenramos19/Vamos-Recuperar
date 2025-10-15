@@ -557,7 +557,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                   placeholder="Search for a location..."
                   className="w-full"
                 />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
                     Type a location name or address, then click on the map to fine-tune
                   </p>
@@ -567,7 +567,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                     size="sm"
                     onClick={handleUseMyLocation}
                     disabled={isLoadingLocation}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 shrink-0"
                   >
                     <MapPin className="h-4 w-4" />
                     {isLoadingLocation ? "Getting Location..." : "Use My Location"}
