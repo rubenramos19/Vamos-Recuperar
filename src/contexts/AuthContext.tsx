@@ -40,6 +40,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Create or update profile in Supabase
+        await supabase
+          .from('profiles')
+          .upsert({
+            user_id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || undefined,
+          }, {
+            onConflict: 'user_id'
+          });
+
         // Fetch user role from Supabase
         const { data: roleData, error } = await supabase
           .from('user_roles')
@@ -94,6 +105,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await updateProfile(userCredential.user, {
         displayName: name
       });
+
+      // Create profile in Supabase
+      await supabase
+        .from('profiles')
+        .insert({
+          user_id: userCredential.user.uid,
+          email: email,
+          name: name,
+        });
 
       // Assign default 'reporter' role in Supabase
       await supabase
