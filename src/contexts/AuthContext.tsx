@@ -67,21 +67,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const timeSinceActivity = Date.now() - lastActivity;
       
       if (timeSinceActivity >= SESSION_TIMEOUT) {
-        toast({
-          title: "Session expired",
-          description: "You've been logged out due to inactivity",
-          variant: "destructive",
-        });
-        logout();
+        try {
+          await signOut(auth);
+          toast({
+            title: "Session expired",
+            description: "You've been logged out due to inactivity",
+            variant: "destructive",
+          });
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
       }
     }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [user, lastActivity]);
+  }, [user, lastActivity, toast]);
 
   // Set up Firebase auth state listener
   useEffect(() => {
