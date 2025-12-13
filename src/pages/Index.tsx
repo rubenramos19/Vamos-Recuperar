@@ -10,6 +10,9 @@ import { MapPin, Users, CheckCircle, Clock, Plus, ArrowRight } from "lucide-reac
 const Index = () => {
   const { user } = useAuth();
   const { issues } = useIssues();
+  
+  // Check if current user has reported any issues
+  const userHasReportedIssues = user && issues.some(issue => issue.reporterId === user.id);
 
   const stats = {
     total: issues.length,
@@ -159,10 +162,19 @@ const Index = () => {
             Join thousands of citizens who are actively improving their communities through CivicSpot.
           </p>
           {user ? (
-            <Link to="/report">
+            <Link to={userHasReportedIssues ? "/my-reports" : "/report"}>
               <Button variant="secondary" size="lg" className="text-lg px-8 py-6">
-                <Plus className="h-5 w-5 mr-2" />
-                Report Your First Issue
+                {userHasReportedIssues ? (
+                  <>
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    View My Reports
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 mr-2" />
+                    Report Your First Issue
+                  </>
+                )}
               </Button>
             </Link>
           ) : (
