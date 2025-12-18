@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, User, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const { user, isAdmin, login } = useAuth();
@@ -18,43 +19,50 @@ const Login = () => {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const pendingAdminCheck = useRef(false);
+
+  // Watch for user changes after admin login
+  useEffect(() => {
+    if (pendingAdminCheck.current && user) {
+      pendingAdminCheck.current = false;
+      if (isAdmin()) {
+        toast({
+          title: "Success",
+          description: "Welcome to the admin dashboard.",
+        });
+        navigate("/admin");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You do not have administrator privileges.",
+        });
+      }
+      setIsAdminLoading(false);
+    }
+  }, [user, isAdmin, navigate, toast]);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && isAdmin()) {
-      navigate("/admin");
-    } else if (user) {
-      navigate("/");
+    if (user && !pendingAdminCheck.current) {
+      if (isAdmin()) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     }
   }, [user, isAdmin, navigate]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAdminLoading(true);
+    pendingAdminCheck.current = true;
 
     try {
       await login(adminEmail, adminPassword);
-      
-      // Wait for auth state to update
-      setTimeout(() => {
-        if (!isAdmin()) {
-          toast({
-            variant: "destructive",
-            title: "Access Denied",
-            description: "You do not have administrator privileges.",
-          });
-          setIsAdminLoading(false);
-          return;
-        }
-
-        toast({
-          title: "Success",
-          description: "Welcome to the admin dashboard.",
-        });
-        
-        navigate("/admin");
-      }, 500);
+      // The useEffect above will handle the redirect once user state updates
     } catch (error: any) {
+      pendingAdminCheck.current = false;
       toast({
         variant: "destructive",
         title: "Login Failed",
