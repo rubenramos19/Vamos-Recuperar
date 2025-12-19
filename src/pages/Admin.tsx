@@ -16,16 +16,28 @@ import {
 import { AlertCircle, CheckCircle2, Loader2, Users } from "lucide-react";
 
 const Admin = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const { issues } = useIssues();
   const navigate = useNavigate();
 
-  // Redirect if not an admin
+  // Redirect if not an admin (wait for auth/role to finish loading)
   useEffect(() => {
+    if (loading) return;
     if (!user || !isAdmin()) {
       navigate("/");
     }
-  }, [user, isAdmin, navigate]);
+  }, [loading, user, isAdmin, navigate]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex items-center justify-center gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading admin dashboard…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !isAdmin()) return null;
 
