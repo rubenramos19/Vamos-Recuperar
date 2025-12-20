@@ -1,31 +1,55 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import React, { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { IssueCategory, IssueStatus } from '@/contexts/IssueContext';
-import { useIssues } from '@/contexts/IssueContext';
-import { useAuth } from '@/contexts/AuthContext';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { IssueCategory, IssueStatus } from "@/contexts/IssueContext";
+import { useIssues } from "@/contexts/IssueContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Camera, X, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
+import { googleMapsLoader } from "@/lib/googleMapsLoader";
 import { GoogleVisionService as ImageVerificationService } from "@/services/googleVisionService";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { logger } from '@/lib/logger';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 
 // Google Maps imports
-import { Loader } from '@googlemaps/js-api-loader';
-import { GOOGLE_MAPS_API_KEY } from '@/config/constants';
+import { Loader } from "@googlemaps/js-api-loader";
+import { GOOGLE_MAPS_API_KEY, GOOGLE_MAP_ID } from "@/config/constants";
 
 // Constants for validation
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -33,25 +57,42 @@ const MAX_IMAGES = 5;
 const MAX_ISSUES_PER_HOUR = 5;
 
 const formSchema = z.object({
-  title: z.string().min(3, {
-    message: "Title must be at least 3 characters.",
-  }).max(200, {
-    message: "Title must be less than 200 characters.",
-  }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }).max(2000, {
-    message: "Description must be less than 2000 characters.",
-  }),
-  category: z.enum(['road_damage', 'sanitation', 'lighting', 'graffiti', 'sidewalk', 'vegetation', 'other']),
+  title: z
+    .string()
+    .min(3, {
+      message: "Title must be at least 3 characters.",
+    })
+    .max(200, {
+      message: "Title must be less than 200 characters.",
+    }),
+  description: z
+    .string()
+    .min(10, {
+      message: "Description must be at least 10 characters.",
+    })
+    .max(2000, {
+      message: "Description must be less than 2000 characters.",
+    }),
+  category: z.enum([
+    "road_damage",
+    "sanitation",
+    "lighting",
+    "graffiti",
+    "sidewalk",
+    "vegetation",
+    "other",
+  ]),
   location: z.object({
     latitude: z.number(),
     longitude: z.number(),
     address: z.string().optional(),
   }),
-  photos: z.array(z.string()).max(MAX_IMAGES, {
-    message: `You can upload a maximum of ${MAX_IMAGES} photos.`,
-  }).optional(),
+  photos: z
+    .array(z.string())
+    .max(MAX_IMAGES, {
+      message: `You can upload a maximum of ${MAX_IMAGES} photos.`,
+    })
+    .optional(),
   isPublic: z.boolean().default(true),
 });
 
@@ -62,33 +103,47 @@ interface IssueFormProps {
   onSubmitSuccess?: () => void;
 }
 
-const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit, onSubmitSuccess }) => {
+const IssueForm: React.FC<IssueFormProps> = ({
+  issueId,
+  defaultValues,
+  onSubmit,
+  onSubmitSuccess,
+}) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addIssue, updateIssue, getIssue } = useIssues();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number; address?: string } | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    address?: string;
+  } | null>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
-  const [photoVerifications, setPhotoVerifications] = useState<{[key: number]: {isValid: boolean; confidence: number; reason?: string}}>({});
+  const [photoVerifications, setPhotoVerifications] = useState<{
+    [key: number]: { isValid: boolean; confidence: number; reason?: string };
+  }>({});
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifierReady, setVerifierReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocomplete = useRef<any>(null);
   const [showLocationConfirm, setShowLocationConfirm] = useState(false);
-  const [currentPosition, setCurrentPosition] = useState<{latitude: number; longitude: number} | null>(null);
+  const [currentPosition, setCurrentPosition] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues || {
-      title: '',
-      description: '',
-      category: 'road_damage',
+      title: "",
+      description: "",
+      category: "road_damage",
       location: {
         latitude: 0,
         longitude: 0,
@@ -99,18 +154,21 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
     mode: "onChange",
   });
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = event.target.files;
     if (!files) return;
 
-    const description = form.getValues('description');
-    const category = form.getValues('category');
+    const description = form.getValues("description");
+    const category = form.getValues("category");
 
     if (!description || description.length < 10) {
       toast({
         variant: "destructive",
         title: "Description Required",
-        description: "Please provide a detailed description before uploading photos for verification.",
+        description:
+          "Please provide a detailed description before uploading photos for verification.",
       });
       return;
     }
@@ -126,7 +184,9 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
     }
 
     // Validate file sizes
-    const oversizedFiles = Array.from(files).filter(file => file.size > MAX_IMAGE_SIZE);
+    const oversizedFiles = Array.from(files).filter(
+      (file) => file.size > MAX_IMAGE_SIZE
+    );
     if (oversizedFiles.length > 0) {
       toast({
         variant: "destructive",
@@ -139,38 +199,40 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
 
     const newPhotos = Array.from(files).slice(0, MAX_IMAGES - photos.length);
     setIsVerifying(true);
-    
+
     for (let i = 0; i < newPhotos.length; i++) {
       const file = newPhotos[i];
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         const result = e.target?.result as string;
         const photoIndex = photos.length + i;
-        
+
         try {
           // Verify the image matches the description
           const verification = await ImageVerificationService.verifyImage(
-            result, 
-            description, 
+            result,
+            description,
             category
           );
-          
-          setPhotoVerifications(prev => ({
+
+          setPhotoVerifications((prev) => ({
             ...prev,
-            [photoIndex]: verification
+            [photoIndex]: verification,
           }));
 
           if (verification.isValid) {
-            setPhotos(prev => {
+            setPhotos((prev) => {
               const updated = [...prev, result].slice(0, MAX_IMAGES);
-              form.setValue('photos', updated);
+              form.setValue("photos", updated);
               return updated;
             });
-            
+
             toast({
               title: "Image Verified",
-              description: verification.reason || `Image verified with ${verification.confidence}% confidence`,
+              description:
+                verification.reason ||
+                `Image verified with ${verification.confidence}% confidence`,
             });
           } else {
             // Remove and prompt re-upload
@@ -178,9 +240,14 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
             toast({
               variant: "destructive",
               title: "Irrelevant image detected",
-              description: verification.reason || "The uploaded image does not match your issue description.",
+              description:
+                verification.reason ||
+                "The uploaded image does not match your issue description.",
               action: (
-                <ToastAction altText="Re-upload" onClick={() => fileInputRef.current?.click()}>
+                <ToastAction
+                  altText="Re-upload"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   Re-upload
                 </ToastAction>
               ),
@@ -189,44 +256,48 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
             setTimeout(() => fileInputRef.current?.click(), 600);
           }
         } catch (error) {
-          logger.error('Verification error:', error);
+          logger.error("Verification error:", error);
           // Block upload on error and prompt re-upload
           if (fileInputRef.current) fileInputRef.current.value = "";
           toast({
             variant: "destructive",
             title: "Verification unavailable",
-            description: "Could not verify the image. Please try uploading again.",
+            description:
+              "Could not verify the image. Please try uploading again.",
             action: (
-              <ToastAction altText="Re-upload" onClick={() => fileInputRef.current?.click()}>
+              <ToastAction
+                altText="Re-upload"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 Re-upload
               </ToastAction>
             ),
           });
           setTimeout(() => fileInputRef.current?.click(), 600);
         }
-        
+
         if (i === newPhotos.length - 1) {
           setIsVerifying(false);
         }
       };
-      
+
       reader.readAsDataURL(file);
     }
   };
 
   const removePhoto = (index: number) => {
-    setPhotos(prev => {
+    setPhotos((prev) => {
       const updated = prev.filter((_, i) => i !== index);
-      form.setValue('photos', updated);
+      form.setValue("photos", updated);
       return updated;
     });
-    
-    setPhotoVerifications(prev => {
+
+    setPhotoVerifications((prev) => {
       const updated = { ...prev };
       delete updated[index];
       // Reindex remaining verifications
       const reindexed: typeof updated = {};
-      Object.keys(updated).forEach(key => {
+      Object.keys(updated).forEach((key) => {
         const oldIndex = parseInt(key);
         if (oldIndex > index) {
           reindexed[oldIndex - 1] = updated[oldIndex];
@@ -263,7 +334,8 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         toast({
           variant: "destructive",
           title: "Location Access Denied",
-          description: "Please enable location permissions to use this feature.",
+          description:
+            "Please enable location permissions to use this feature.",
         });
       }
     );
@@ -273,22 +345,18 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
     if (!currentPosition || !map.current) return;
 
     const { latitude, longitude } = currentPosition;
-    
+
     setLocation({ latitude, longitude });
-    form.setValue('location.latitude', latitude);
-    form.setValue('location.longitude', longitude);
-    form.setValue('location.address', 'Current Location');
+    form.setValue("location.latitude", latitude);
+    form.setValue("location.longitude", longitude);
+    form.setValue("location.address", "Current Location");
 
     map.current.panTo({ lat: latitude, lng: longitude });
     map.current.setZoom(16);
 
-    const loader = new Loader({
-      apiKey: GOOGLE_MAPS_API_KEY!,
-      version: "weekly",
-      libraries: ["marker"]
-    });
-
-    const { AdvancedMarkerElement } = await loader.importLibrary("marker") as any;
+    const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
+      "marker"
+    )) as any;
 
     if (map.current.currentMarker) {
       map.current.currentMarker.setMap(null);
@@ -297,7 +365,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
     map.current.currentMarker = new AdvancedMarkerElement({
       map: map.current,
       position: { lat: latitude, lng: longitude },
-      title: "Current Location"
+      title: "Current Location",
     });
 
     setShowLocationConfirm(false);
@@ -310,17 +378,15 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
   useEffect(() => {
     const initializeMap = async () => {
       if (!GOOGLE_MAPS_API_KEY || !mapContainer.current) return;
-      
-      try {
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: "weekly",
-          libraries: ["places", "geometry"]
-        });
 
-        const { Map } = await loader.importLibrary("maps") as any;
-        const { AdvancedMarkerElement } = await loader.importLibrary("marker") as any;
-        const { Autocomplete } = await loader.importLibrary("places") as any;
+      try {
+        const { Map } = (await googleMapsLoader.importLibrary("maps")) as any;
+        const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
+          "marker"
+        )) as any;
+        const { Autocomplete } = (await googleMapsLoader.importLibrary(
+          "places"
+        )) as any;
 
         // Default to Ayodhya coordinates
         const center = { lat: 26.7922, lng: 82.1998 };
@@ -328,7 +394,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         map.current = new Map(mapContainer.current, {
           center: center,
           zoom: 13,
-          mapId: "DEMO_MAP_ID",
+          mapId: GOOGLE_MAP_ID,
           disableDefaultUI: false,
           zoomControl: true,
           mapTypeControl: false,
@@ -341,27 +407,28 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         // Initialize Places Autocomplete
         if (searchInputRef.current) {
           autocomplete.current = new Autocomplete(searchInputRef.current, {
-            types: ['geocode'],
-            fields: ['place_id', 'geometry', 'name', 'formatted_address']
+            types: ["geocode"],
+            fields: ["place_id", "geometry", "name", "formatted_address"],
           });
 
-          autocomplete.current.addListener('place_changed', () => {
+          autocomplete.current.addListener("place_changed", () => {
             const place = autocomplete.current.getPlace();
-            
+
             if (place.geometry && place.geometry.location) {
               const lat = place.geometry.location.lat();
               const lng = place.geometry.location.lng();
-              
+
               const newLocation = {
                 latitude: lat,
                 longitude: lng,
-                address: place.formatted_address || place.name || 'Selected Location'
+                address:
+                  place.formatted_address || place.name || "Selected Location",
               };
-              
+
               setLocation(newLocation);
-              form.setValue('location.latitude', lat);
-              form.setValue('location.longitude', lng);
-              form.setValue('location.address', newLocation.address);
+              form.setValue("location.latitude", lat);
+              form.setValue("location.longitude", lng);
+              form.setValue("location.address", newLocation.address);
 
               // Update map center and marker
               map.current.panTo({ lat, lng });
@@ -375,25 +442,25 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
               map.current.currentMarker = new AdvancedMarkerElement({
                 map: map.current,
                 position: { lat, lng },
-                title: newLocation.address
+                title: newLocation.address,
               });
             }
           });
         }
 
         // Add click listener to select location
-        map.current.addListener('click', (e: any) => {
+        map.current.addListener("click", (e: any) => {
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
-          
+
           const newLocation = {
             latitude: lat,
             longitude: lng,
           };
-          
+
           setLocation(newLocation);
-          form.setValue('location.latitude', lat);
-          form.setValue('location.longitude', lng);
+          form.setValue("location.latitude", lat);
+          form.setValue("location.longitude", lng);
 
           // Clear existing markers and add new one
           if (map.current.currentMarker) {
@@ -403,12 +470,11 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
           map.current.currentMarker = new AdvancedMarkerElement({
             map: map.current,
             position: { lat, lng },
-            title: "Selected Location"
+            title: "Selected Location",
           });
         });
-
       } catch (error) {
-        logger.error('Error initializing Google Maps:', error);
+        logger.error("Error initializing Google Maps:", error);
       }
     };
 
@@ -427,13 +493,9 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         const { latitude, longitude } = defaultValues.location;
         setLocation({ latitude, longitude });
 
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: "weekly",
-          libraries: ["marker"]
-        });
-
-        const { AdvancedMarkerElement } = await loader.importLibrary("marker") as any;
+        const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
+          "marker"
+        )) as any;
 
         // Clear existing marker
         if (map.current.currentMarker) {
@@ -447,7 +509,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         map.current.currentMarker = new AdvancedMarkerElement({
           map: map.current,
           position: { lat: latitude, lng: longitude },
-          title: "Issue Location"
+          title: "Issue Location",
         });
       }
     };
@@ -459,7 +521,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
     setIsSubmitting(true);
     try {
       if (!user) {
-        throw new Error('User must be logged in to submit an issue.');
+        throw new Error("User must be logged in to submit an issue.");
       }
 
       // Check email verification for new issues
@@ -467,7 +529,8 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         toast({
           variant: "destructive",
           title: "Email Verification Required",
-          description: "Please verify your email address before reporting issues.",
+          description:
+            "Please verify your email address before reporting issues.",
         });
         setIsSubmitting(false);
         return;
@@ -477,13 +540,13 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
       if (!issueId) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count, error: countError } = await supabase
-          .from('issues')
-          .select('*', { count: 'exact', head: true })
-          .eq('reporter_id', user.id)
-          .gte('created_at', oneHourAgo);
+          .from("issues")
+          .select("*", { count: "exact", head: true })
+          .eq("reporter_id", user.id)
+          .gte("created_at", oneHourAgo);
 
         if (countError) {
-          logger.error('Error checking rate limit:', countError);
+          logger.error("Error checking rate limit:", countError);
         } else if (count && count >= MAX_ISSUES_PER_HOUR) {
           toast({
             variant: "destructive",
@@ -501,13 +564,13 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
         description: values.description,
         category: values.category,
         reporterId: user.id,
-        reporterName: user.name || 'Anonymous',
+        reporterName: user.name || "Anonymous",
         reporterEmail: user.email,
-        status: 'open' as IssueStatus,
+        status: "open" as IssueStatus,
         location: {
           latitude: values.location.latitude,
           longitude: values.location.longitude,
-          address: values.location.address || 'No address provided',
+          address: values.location.address || "No address provided",
         },
         photos: photos,
         isPublic: values.isPublic,
@@ -536,14 +599,15 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
       if (onSubmitSuccess) {
         onSubmitSuccess();
       } else {
-        navigate('/');
+        navigate("/");
       }
     } catch (error: any) {
       logger.error("Error submitting issue:", error);
       toast({
         variant: "destructive",
         title: "Error Reporting Issue",
-        description: error.message || "Failed to report the issue. Please try again.",
+        description:
+          error.message || "Failed to report the issue. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -557,7 +621,10 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmitHandler)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="title"
@@ -565,7 +632,10 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="A brief title for the issue" {...field} />
+                    <Input
+                      placeholder="A brief title for the issue"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -594,7 +664,10 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -618,7 +691,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
             {/* Map Location Selection */}
             <div className="w-full">
               <Label>Select Location on Map</Label>
-              
+
               {/* Location Search Input */}
               <div className="mb-4 space-y-2">
                 <Input
@@ -629,7 +702,8 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                 />
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    Type a location name or address, then click on the map to fine-tune
+                    Type a location name or address, then click on the map to
+                    fine-tune
                   </p>
                   <Button
                     type="button"
@@ -640,11 +714,13 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                     className="flex items-center gap-2 shrink-0"
                   >
                     <MapPin className="h-4 w-4" />
-                    {isLoadingLocation ? "Getting Location..." : "Use My Location"}
+                    {isLoadingLocation
+                      ? "Getting Location..."
+                      : "Use My Location"}
                   </Button>
                 </div>
               </div>
-              
+
               <div ref={mapContainer} className="h-64 rounded border" />
             </div>
 
@@ -652,7 +728,8 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
             <div>
               <Label>Photos (Optional - Max 5, 5MB each)</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Photos will be automatically verified against your description to ensure relevance.
+                Photos will be automatically verified against your description
+                to ensure relevance.
               </p>
               <div className="mt-2">
                 {photos.length < MAX_IMAGES && (
@@ -665,14 +742,13 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                   >
                     <Camera className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
-                      {isVerifying 
-                        ? "Verifying images..." 
-                        : `Click to upload photos (${photos.length}/${MAX_IMAGES})`
-                      }
+                      {isVerifying
+                        ? "Verifying images..."
+                        : `Click to upload photos (${photos.length}/${MAX_IMAGES})`}
                     </p>
                   </div>
                 )}
-                
+
                 {photos.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                     {photos.map((photo, index) => (
@@ -682,15 +758,17 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                           alt={`Issue photo ${index + 1}`}
                           className="w-full h-32 object-cover rounded-lg"
                         />
-                        
+
                         {/* Verification Status Badge */}
                         {photoVerifications[index] && (
-                          <div className={cn(
-                            "absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                            photoVerifications[index].isValid
-                              ? "bg-green-100 text-green-800 border border-green-200"
-                              : "bg-red-100 text-red-800 border border-red-200"
-                          )}>
+                          <div
+                            className={cn(
+                              "absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                              photoVerifications[index].isValid
+                                ? "bg-green-100 text-green-800 border border-green-200"
+                                : "bg-red-100 text-red-800 border border-red-200"
+                            )}
+                          >
                             {photoVerifications[index].isValid ? (
                               <>
                                 <CheckCircle className="h-3 w-3" />
@@ -704,7 +782,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                             )}
                           </div>
                         )}
-                        
+
                         <button
                           type="button"
                           onClick={() => removePhoto(index)}
@@ -712,7 +790,7 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        
+
                         {/* Verification Details Tooltip */}
                         {photoVerifications[index] && (
                           <div className="absolute bottom-0 left-0 right-0 bg-black/75 text-white text-xs p-2 rounded-b-lg">
@@ -757,22 +835,31 @@ const IssueForm: React.FC<IssueFormProps> = ({ issueId, defaultValues, onSubmit,
             />
 
             <Button type="submit" disabled={isSubmitting || isVerifying}>
-              {isSubmitting ? "Submitting..." : isVerifying ? "Verifying Images..." : "Submit"}
+              {isSubmitting
+                ? "Submitting..."
+                : isVerifying
+                ? "Verifying Images..."
+                : "Submit"}
             </Button>
           </form>
         </Form>
       </CardContent>
 
       {/* Location Confirmation Dialog */}
-      <AlertDialog open={showLocationConfirm} onOpenChange={setShowLocationConfirm}>
+      <AlertDialog
+        open={showLocationConfirm}
+        onOpenChange={setShowLocationConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Use Current Location?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want to set your current location as the location of this issue?
+              Do you want to set your current location as the location of this
+              issue?
               {currentPosition && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Coordinates: {currentPosition.latitude.toFixed(6)}, {currentPosition.longitude.toFixed(6)}
+                  Coordinates: {currentPosition.latitude.toFixed(6)},{" "}
+                  {currentPosition.longitude.toFixed(6)}
                 </div>
               )}
             </AlertDialogDescription>
