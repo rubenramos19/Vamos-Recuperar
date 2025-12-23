@@ -178,7 +178,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built with [Lovable](https://lovable.dev) for rapid prototyping
 - UI components from [shadcn/ui](https://ui.shadcn.com)
 - Icons from [Lucide React](https://lucide.dev)
 - Maps powered by [Google Maps](https://developers.google.com/maps)
