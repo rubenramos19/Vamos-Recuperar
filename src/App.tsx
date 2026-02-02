@@ -28,6 +28,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PedirAjuda from "./pages/PedirAjuda";
 import QueroAjudar from "./pages/QueroAjudar";
 import Ajudar from "./pages/Ajudar";
+import Feed from "./pages/Feed";
 
 
 
@@ -113,6 +114,7 @@ const App = () => (
 
   {/* Ajudar page (public) */}
   <Route path="/ajudar" element={<Ajudar />} />
+  <Route path="/feed" element={<Feed />} />
   <Route path="/alerts" element={<Alerts />} />
 
   {/* Pública (se quiseres, podes deixar pública) */}

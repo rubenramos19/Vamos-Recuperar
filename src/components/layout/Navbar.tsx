@@ -34,6 +34,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Alertas", path: "/alerts", icon: <Bell className="mr-2 h-4 w-4" /> },
+    { name: "Feed", path: "/feed", icon: <Map className="mr-2 h-4 w-4" /> },
     { name: "Ajudar", path: "/ajudar", icon: <UserPlus className="mr-2 h-4 w-4" /> },
     { name: "Os meus registos", path: "/my-reports", icon: <ClipboardList className="mr-2 h-4 w-4" />, requiresAuth: true },
     { name: "Perfil", path: "/profile", icon: <Settings className="mr-2 h-4 w-4" />, requiresAuth: true },
