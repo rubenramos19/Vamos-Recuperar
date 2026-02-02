@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import SignupForm from "@/components/auth/SignupForm";
@@ -25,10 +24,10 @@ const Signup = () => {
               <div className="h-5 w-5 bg-primary rounded-full"></div>
             </div>
           </div>
-          <span className="text-2xl font-bold">CivicSpot</span>
+          <span className="text-2xl font-bold">Vamos Recuperar</span>
         </Link>
         <p className="mt-2 text-muted-foreground">
-          Join CivicSpot to report issues and help improve your community
+          Junta-te ao Vamos Recuperar para reportares ocorrências e ajudares a melhorar a tua comunidade
         </p>
       </div>
       <SignupForm />

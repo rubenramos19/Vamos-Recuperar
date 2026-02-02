@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import IssueForm from "@/components/issues/IssueForm";
@@ -30,8 +29,8 @@ const EditIssue = () => {
         if (!fetchedIssue) {
           toast({
             variant: "destructive",
-            title: "Issue not found",
-            description: "The issue you're trying to edit doesn't exist.",
+            title: "Ocorrência não encontrada",
+            description: "A ocorrência que estás a tentar editar não existe.",
           });
           navigate("/");
           return;
@@ -41,8 +40,8 @@ const EditIssue = () => {
         if (!user || (!isAdmin() && user.id !== fetchedIssue.reporterId)) {
           toast({
             variant: "destructive",
-            title: "Access denied",
-            description: "You don't have permission to edit this issue.",
+            title: "Acesso negado",
+            description: "Não tens permissões para editar esta ocorrência.",
           });
           navigate("/");
           return;
@@ -53,8 +52,8 @@ const EditIssue = () => {
         logger.error("Error fetching issue:", error);
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Failed to load the issue.",
+          title: "Erro",
+          description: "Não foi possível carregar a ocorrência.",
         });
         navigate("/");
       } finally {
@@ -67,8 +66,8 @@ const EditIssue = () => {
 
   const handleSubmitSuccess = () => {
     toast({
-      title: "Issue updated",
-      description: "Your issue has been updated successfully.",
+      title: "Ocorrência atualizada",
+      description: "A tua ocorrência foi atualizada com sucesso.",
     });
     navigate(`/issue/${id}`);
   };
@@ -101,9 +100,9 @@ const EditIssue = () => {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Edit Issue</h1>
+        <h1 className="text-2xl font-bold mb-2">Editar Ocorrência</h1>
         <p className="text-muted-foreground">
-          Update the details of your reported issue.
+          Atualiza os detalhes da ocorrência que reportaste.
         </p>
       </div>
       <IssueForm

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Issue, IssueStatus, useIssues } from "@/contexts/IssueContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,9 +14,9 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import {
@@ -31,10 +30,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import PhotoGalleryDialog from "@/components/issues/PhotoGalleryDialog";
+import { cn } from "@/lib/utils";
 
 interface IssueDetailProps {
   issue: Issue;
 }
+
+const LEIRIA_ZOOM_DELTA = 0.002;
 
 const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
   const { user, isAdmin } = useAuth();
@@ -42,17 +45,21 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "PPP");
+  const photos: string[] = issue?.photos ?? [];
+
+  const [galleryOpen, setGalleryOpen] = React.useState(false);
+  const [galleryIndex, setGalleryIndex] = React.useState(0);
+
+  const openGalleryAt = (i: number) => {
+    setGalleryIndex(i);
+    setGalleryOpen(true);
   };
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), "p");
-  };
+  const formatDate = (dateString: string) => format(new Date(dateString), "PPP");
+  const formatTime = (dateString: string) => format(new Date(dateString), "p");
 
-  const formatCategory = (category: string) => {
-    return category.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-  };
+  const formatCategory = (category: string) =>
+    category.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
   const getStatusBadge = (status: IssueStatus) => {
     switch (status) {
@@ -64,19 +71,13 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
         );
       case "in_progress":
         return (
-          <Badge
-            variant="outline"
-            className="bg-civic-yellow text-black flex items-center gap-1"
-          >
+          <Badge variant="outline" className="flex items-center gap-1">
             <Loader2 className="h-3 w-3 animate-spin" /> In Progress
           </Badge>
         );
       case "resolved":
         return (
-          <Badge
-            variant="outline"
-            className="bg-civic-green text-white flex items-center gap-1"
-          >
+          <Badge variant="outline" className="flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" /> Resolved
           </Badge>
         );
@@ -97,200 +98,258 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
 
   const handleDelete = () => {
     deleteIssue(issue.id);
-    toast({
-      title: "Issue Deleted",
-      description: "The issue has been deleted successfully",
-    });
+    toast({ title: "Issue Deleted", description: "The issue has been deleted successfully" });
     navigate("/");
   };
 
+  const locationLabel =
+    issue.location.address?.trim()
+      ? issue.location.address
+      : `${issue.location.latitude.toFixed(6)}, ${issue.location.longitude.toFixed(6)}`;
+
+    const googleMapsLink = `https://www.google.com/maps?q=${issue.location.latitude},${issue.location.longitude}`;
+
+  const embedSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${
+    issue.location.longitude - LEIRIA_ZOOM_DELTA
+  }%2C${issue.location.latitude - LEIRIA_ZOOM_DELTA}%2C${
+    issue.location.longitude + LEIRIA_ZOOM_DELTA
+  }%2C${issue.location.latitude + LEIRIA_ZOOM_DELTA}&layer=mapnik&marker=${
+    issue.location.latitude
+  }%2C${issue.location.longitude}`;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{issue.title}</h1>
-        <div>{getStatusBadge(issue.status)}</div>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold leading-snug break-words">
+              {issue.title}
+            </h1>
+            <div className="mt-1 flex items-center gap-2">
+              {getStatusBadge(issue.status)}
+              <Badge variant="secondary">{formatCategory(issue.category)}</Badge>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          {/* Description */}
+      {/* Meta */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="text-muted-foreground text-xs">Local</div>
+                <div className="break-words">{locationLabel}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-2 text-sm">
+              <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="text-muted-foreground text-xs">Reportado por</div>
+                <div className="break-words">{issue.reporterName}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-2 text-sm">
+              <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="text-muted-foreground text-xs">Data</div>
+                <div>
+                  {formatDate(issue.createdAt)}{" "}
+                  <span className="text-muted-foreground">•</span>{" "}
+                  {formatTime(issue.createdAt)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {issue.createdAt !== issue.updatedAt && (
           <Card>
-            <CardContent className="pt-6">
-              <p className="text-gray-700 dark:text-gray-300">
-                {issue.description}
-              </p>
+            <CardContent className="pt-5">
+              <div className="flex items-start gap-2 text-sm">
+                <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <div className="min-w-0">
+                  <div className="text-muted-foreground text-xs">Atualizado</div>
+                  <div>
+                    {formatDate(issue.updatedAt)}{" "}
+                    <span className="text-muted-foreground">•</span>{" "}
+                    {formatTime(issue.updatedAt)}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
+        )}
+      </div>
 
-          {/* Issue Details */}
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span>
-                  {issue.location.address
-                    ? issue.location.address
-                    : `${issue.location.latitude.toFixed(
-                        6
-                      )}, ${issue.location.longitude.toFixed(6)}`}
-                </span>
+      {/* Description */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="text-sm text-muted-foreground mb-2">Descrição</div>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            {issue.description}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Photos */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Fotos</div>
+            {photos.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {photos.length} foto{photos.length > 1 ? "s" : ""}
               </div>
+            )}
+          </div>
 
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span>Reported on {formatDate(issue.createdAt)}</span>
-              </div>
+          {photos.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Sem fotos.</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {photos.slice(0, 4).map((p, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => openGalleryAt(i)}
+                  className={cn(
+                    "rounded-lg overflow-hidden border hover:ring-2 hover:ring-ring transition",
+                  )}
+                >
+                  <img src={p} alt={`Foto ${i + 1}`} className="w-full h-28 object-cover" />
+                </button>
+              ))}
 
-              {issue.createdAt !== issue.updatedAt && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span>Last updated on {formatDate(issue.updatedAt)}</span>
-                </div>
+              {photos.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => openGalleryAt(0)}
+                  className="rounded-lg border h-28 flex items-center justify-center text-sm text-muted-foreground hover:ring-2 hover:ring-ring transition"
+                >
+                  +{photos.length - 4} mais
+                </button>
               )}
-
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                <User className="h-4 w-4 mr-2" />
-                <span>Reported by {issue.reporterName}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Admin Actions */}
-          {isAdmin() && (
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="text-sm font-medium mb-4">Admin Actions</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant={issue.status === "open" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStatusUpdate("open")}
-                    disabled={issue.status === "open"}
-                  >
-                    Mark as Open
-                  </Button>
-                  <Button
-                    variant={
-                      issue.status === "in_progress" ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => handleStatusUpdate("in_progress")}
-                    disabled={issue.status === "in_progress"}
-                  >
-                    Mark In Progress
-                  </Button>
-                  <Button
-                    variant={issue.status === "resolved" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleStatusUpdate("resolved")}
-                    disabled={issue.status === "resolved"}
-                  >
-                    Mark Resolved
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Edit/Delete Actions */}
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => navigate(`/edit-issue/${issue.id}`)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="flex-1">
-                    <Trash className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete
-                      the issue and remove it from our servers.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
           )}
+
+          <PhotoGalleryDialog
+            open={galleryOpen}
+            onOpenChange={setGalleryOpen}
+            photos={photos}
+            initialIndex={galleryIndex}
+            title="Fotos"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Map preview */}
+      <Card>
+        <CardContent className="pt-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Localização</div>
+<Button asChild variant="outline" size="sm">
+  <a href={googleMapsLink} target="_blank" rel="noreferrer">
+    Abrir no Google Maps <ExternalLink className="h-4 w-4 ml-2" />
+  </a>
+</Button>
+
+          </div>
+
+          <div className="h-56 rounded-lg overflow-hidden border bg-muted">
+            <iframe
+              title="Issue Location"
+              width="100%"
+              height="100%"
+              frameBorder={0}
+              src={embedSrc}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Admin actions */}
+      {isAdmin() && (
+        <Card>
+          <CardContent className="pt-5">
+            <div className="text-sm font-medium mb-3">Admin</div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={issue.status === "open" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleStatusUpdate("open")}
+                disabled={issue.status === "open"}
+              >
+                Open
+              </Button>
+              <Button
+                variant={issue.status === "in_progress" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleStatusUpdate("in_progress")}
+                disabled={issue.status === "in_progress"}
+              >
+                In Progress
+              </Button>
+              <Button
+                variant={issue.status === "resolved" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleStatusUpdate("resolved")}
+                disabled={issue.status === "resolved"}
+              >
+                Resolved
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit/Delete */}
+      {canEdit && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => navigate(`/edit-issue/${issue.id}`)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Editar
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="flex-1">
+                <Trash className="h-4 w-4 mr-2" />
+                Apagar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Tens a certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isto vai apagar o reporte permanentemente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Apagar</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-
-        <div className="space-y-6">
-          {/* Photos */}
-          {issue.photos.length > 0 && (
-            <Card>
-              <CardContent className="pt-6">
-                <h3 className="text-sm font-medium mb-4">Photos</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {issue.photos.map((photo, index) => (
-                    <img
-                      key={index}
-                      src={photo}
-                      alt={`Issue photo ${index + 1}`}
-                      className="w-full h-auto rounded-md"
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Map Preview */}
-          <Card>
-            <CardContent className="pt-6">
-              <h3 className="text-sm font-medium mb-4">Location</h3>
-              <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
-                <iframe
-                  title="Issue Location"
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${
-                    issue.location.longitude - 0.002
-                  }%2C${issue.location.latitude - 0.002}%2C${
-                    issue.location.longitude + 0.002
-                  }%2C${
-                    issue.location.latitude + 0.002
-                  }&layer=mapnik&marker=${issue.location.latitude}%2C${
-                    issue.location.longitude
-                  }`}
-                ></iframe>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Category Info */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <div className="mr-4">
-                  <Badge className="bg-primary">{formatCategory(issue.category)}</Badge>
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <div>Reported: {formatDate(issue.createdAt)}</div>
-                  <div>Time: {formatTime(issue.createdAt)}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

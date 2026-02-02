@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +32,7 @@ const Admin = () => {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading admin dashboard…</span>
+          <span>A carregar o painel de administração…</span>
         </div>
       </div>
     );
@@ -47,30 +46,30 @@ const Admin = () => {
   
   const stats = [
     { 
-      title: "Open Issues", 
+      title: "Por resolver", 
       value: openIssues.length, 
-      description: "Awaiting review and action", 
+      description: "A aguardar análise e ação", 
       icon: <AlertCircle className="h-4 w-4 text-civic-red" />,
       iconBg: "bg-red-100",
     },
     { 
-      title: "In Progress", 
+      title: "Em andamento", 
       value: inProgressIssues.length, 
-      description: "Currently being addressed", 
+      description: "A ser tratado no momento", 
       icon: <Loader2 className="h-4 w-4 text-civic-yellow animate-spin" />,
       iconBg: "bg-yellow-100",
     },
     { 
-      title: "Resolved", 
+      title: "Resolvido", 
       value: resolvedIssues.length, 
-      description: "Successfully completed", 
+      description: "Concluído com sucesso", 
       icon: <CheckCircle2 className="h-4 w-4 text-civic-green" />,
       iconBg: "bg-green-100",
     },
     { 
-      title: "Total Issues", 
+      title: "Total de ocorrências", 
       value: issues.length, 
-      description: "Overall count", 
+      description: "Contagem geral", 
       icon: null,
     },
   ];
@@ -78,9 +77,9 @@ const Admin = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold">Painel de Administração</h1>
         <p className="text-muted-foreground mt-1">
-          Manage and oversee all reported community issues
+          Gere e acompanha todas as ocorrências reportadas na plataforma
         </p>
       </div>
 
@@ -107,28 +106,28 @@ const Admin = () => {
 
       <Tabs defaultValue="issues" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="issues">Issue Management</TabsTrigger>
+          <TabsTrigger value="issues">Gestão de Ocorrências</TabsTrigger>
           <TabsTrigger value="users">
             <Users className="h-4 w-4 mr-2" />
-            User Management
+            Gestão de Utilizadores
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="issues">
           <Card>
             <CardHeader>
-              <CardTitle>Issue Management</CardTitle>
+              <CardTitle>Gestão de Ocorrências</CardTitle>
               <CardDescription>
-                View, filter, and update status for all reported issues
+                Consulta, filtra e atualiza o estado de todas as ocorrências reportadas
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="all">
                 <TabsList className="mb-4">
-                  <TabsTrigger value="all">All Issues</TabsTrigger>
-                  <TabsTrigger value="open">Open</TabsTrigger>
-                  <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-                  <TabsTrigger value="resolved">Resolved</TabsTrigger>
+                  <TabsTrigger value="all">Todas</TabsTrigger>
+                  <TabsTrigger value="open">Por resolver</TabsTrigger>
+                  <TabsTrigger value="in_progress">Em andamento</TabsTrigger>
+                  <TabsTrigger value="resolved">Resolvidas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="all">
                   <AdminIssueTable />
@@ -150,9 +149,9 @@ const Admin = () => {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
+              <CardTitle>Gestão de Utilizadores</CardTitle>
               <CardDescription>
-                View all users and manage their roles
+                Consulta todos os utilizadores e gere os seus perfis e permissões
               </CardDescription>
             </CardHeader>
             <CardContent>

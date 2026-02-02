@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import LoginForm from "@/components/auth/LoginForm";
@@ -27,15 +26,15 @@ const Login = () => {
       pendingAdminCheck.current = false;
       if (isAdmin()) {
         toast({
-          title: "Success",
-          description: "Welcome to the admin dashboard.",
+          title: "Sucesso",
+          description: "Bem-vindo ao painel de administração.",
         });
         navigate("/admin");
       } else {
         toast({
           variant: "destructive",
-          title: "Access Denied",
-          description: "You do not have administrator privileges.",
+          title: "Acesso negado",
+          description: "Não tens permissões de administrador.",
         });
       }
       setIsAdminLoading(false);
@@ -65,8 +64,8 @@ const Login = () => {
       pendingAdminCheck.current = false;
       toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        title: "Falha no login",
+        description: error.message || "Credenciais inválidas. Tenta novamente.",
       });
       setIsAdminLoading(false);
     }
@@ -82,10 +81,10 @@ const Login = () => {
               <div className="h-5 w-5 bg-primary rounded-full"></div>
             </div>
           </div>
-          <span className="text-2xl font-bold">CivicSpot</span>
+          <span className="text-2xl font-bold">Vamos Recuperar</span>
         </Link>
         <p className="mt-2 text-muted-foreground">
-          Report and track community issues in your area
+          Reporta e acompanha ocorrências na tua comunidade
         </p>
       </div>
 
@@ -93,11 +92,11 @@ const Login = () => {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="user" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            User Login
+            Entrar
           </TabsTrigger>
           <TabsTrigger value="admin" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            Admin Login
+            Administração
           </TabsTrigger>
         </TabsList>
 
@@ -110,10 +109,10 @@ const Login = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-secondary" />
-                Administrator Access
+                Acesso de Administrador
               </CardTitle>
               <CardDescription>
-                Enter your administrator credentials to access the dashboard
+                Introduz as credenciais de administrador para aceder ao painel
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -123,7 +122,7 @@ const Login = () => {
                   <Input
                     id="admin-email"
                     type="email"
-                    placeholder="admin@civicspot.com"
+                    placeholder="admin@vamosrecuperar.pt"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
                     required
@@ -132,7 +131,7 @@ const Login = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password">Password</Label>
+                  <Label htmlFor="admin-password">Palavra-passe</Label>
                   <Input
                     id="admin-password"
                     type="password"
@@ -152,18 +151,18 @@ const Login = () => {
                   {isAdminLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Authenticating...
+                      A autenticar...
                     </>
                   ) : (
                     <>
                       <Shield className="mr-2 h-4 w-4" />
-                      Sign In as Admin
+                      Entrar como Admin
                     </>
                   )}
                 </Button>
               </form>
               <p className="mt-4 text-xs text-muted-foreground text-center">
-                This area is restricted to authorized administrators only.
+                Esta área é restrita a administradores autorizados.
               </p>
             </CardContent>
           </Card>

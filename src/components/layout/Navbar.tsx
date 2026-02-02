@@ -32,9 +32,9 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { name: "Map", path: "/map", icon: <Map className="mr-2 h-4 w-4" /> },
-    { name: "My Reports", path: "/my-reports", icon: <ClipboardList className="mr-2 h-4 w-4" />, requiresAuth: true },
-    { name: "Profile", path: "/profile", icon: <Settings className="mr-2 h-4 w-4" />, requiresAuth: true },
+    { name: "Mapa", path: "/map", icon: <Map className="mr-2 h-4 w-4" /> },
+    { name: "Os meus registos", path: "/my-reports", icon: <ClipboardList className="mr-2 h-4 w-4" />, requiresAuth: true },
+    { name: "Perfil", path: "/profile", icon: <Settings className="mr-2 h-4 w-4" />, requiresAuth: true },
   ];
 
   // Add admin dashboard link for admin users
@@ -59,7 +59,7 @@ const Navbar = () => {
                   <div className="h-4 w-4 bg-primary rounded-full"></div>
                 </div>
               </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">CivicSpot</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">Vamos Recuperar</span>
             </Link>
 
             {/* Desktop Navigation */}

@@ -5,51 +5,51 @@ const About = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">About CivicSpot</h1>
+        <h1 className="text-3xl font-bold mb-4">Sobre o Vamos Recuperar</h1>
         <p className="text-lg text-muted-foreground">
-          Empowering citizens to improve their communities through collaborative issue reporting and resolution.
+          Uma plataforma criada para unir cidadãos e melhorar comunidades através da participação e ação conjunta.
         </p>
       </div>
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Our Mission</CardTitle>
+            <CardTitle>A Nossa Missão</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              CivicSpot is dedicated to bridging the gap between citizens and local authorities by providing 
-              a transparent, efficient platform for reporting and tracking community issues. Our mission is 
-              to foster civic engagement and create more responsive, accountable governance at the local level.
+              O Vamos Recuperar nasce com o objetivo de aproximar os cidadãos das entidades responsáveis, 
+              oferecendo uma forma simples e transparente de identificar problemas e acompanhar soluções.  
+              Queremos fortalecer o envolvimento cívico e contribuir para comunidades mais cuidadas, seguras e eficientes.
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>How It Works</CardTitle>
+            <CardTitle>Como Funciona</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold mb-2">1. Report Issues</h4>
+                <h4 className="font-semibold mb-2">1. Reportar Ocorrências</h4>
                 <p className="text-muted-foreground">
-                  Citizens can easily report problems in their community, from potholes to broken streetlights, 
-                  using our intuitive reporting system with photo documentation and precise location mapping.
+                  Qualquer cidadão pode reportar problemas na sua zona — desde estradas degradadas até iluminação partida — 
+                  de forma rápida, com fotografia e localização exata.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold mb-2">2. Track Progress</h4>
+                <h4 className="font-semibold mb-2">2. Acompanhar o Progresso</h4>
                 <p className="text-muted-foreground">
-                  Monitor the status of reported issues in real-time as authorities review, prioritize, 
-                  and work to resolve community problems.
+                  Segue o estado das ocorrências em tempo real, à medida que são analisadas, priorizadas 
+                  e resolvidas pelas entidades competentes.
                 </p>
               </div>
               <div>
-                <h4 className="font-semibold mb-2">3. Build Better Communities</h4>
+                <h4 className="font-semibold mb-2">3. Construir Comunidades Melhores</h4>
                 <p className="text-muted-foreground">
-                  Together, we create a feedback loop that leads to more responsive governance and 
-                  continuously improving neighborhoods.
+                  Juntos criamos uma ligação direta entre cidadãos e soluções, promovendo transparência, 
+                  responsabilidade e melhoria contínua nos nossos espaços públicos.
                 </p>
               </div>
             </div>
@@ -58,32 +58,32 @@ const About = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Features</CardTitle>
+            <CardTitle>Funcionalidades</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-muted-foreground">
-              <li>• Interactive map-based issue reporting</li>
-              <li>• Photo documentation for better issue description</li>
-              <li>• Real-time status tracking</li>
-              <li>• Category-based issue organization</li>
-              <li>• Community engagement and transparency</li>
-              <li>• Mobile-responsive design for on-the-go reporting</li>
+              <li>• Mapa interativo para reportar problemas</li>
+              <li>• Fotografias para melhor identificação das ocorrências</li>
+              <li>• Acompanhamento do estado em tempo real</li>
+              <li>• Organização por categorias</li>
+              <li>• Transparência e participação comunitária</li>
+              <li>• Design adaptado para telemóvel e uso em qualquer lugar</li>
             </ul>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Contact Us</CardTitle>
+            <CardTitle>Contactos</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Have questions or feedback about CivicSpot? We'd love to hear from you.
+              Tens dúvidas, sugestões ou queres contribuir para o Vamos Recuperar? Fala connosco.
             </p>
             <div className="space-y-2 text-muted-foreground">
-              <p>Email: support@civicspot.com</p>
-              <p>Phone: (555) 123-4567</p>
-              <p>Address: 123 Civic Center, Community City, CC 12345</p>
+              <p>Email: suporte@vamosrecuperar.pt</p>
+              <p>Telefone: (+351) 900 000 000</p>
+              <p>Morada: Plataforma Nacional Vamos Recuperar, Portugal</p>
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,28 +24,28 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      {/* Hero Section */}
+      {/* Hero Section */}     
       <section className="relative overflow-hidden py-20 lg:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              Empower Your <span className="text-primary">Community</span>
+              Juntos <span className="text-primary">Recuperamos</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Report civic issues, track progress, and work together to make your neighborhood a better place to live.
+              Identifica o que precisa de atenção e ajuda a melhorar a tua cidade — um passo de cada vez.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (
                 <Link to="/report">
                   <Button size="lg" className="text-lg px-8 py-6">
                     <Plus className="h-5 w-5 mr-2" />
-                    Report an Issue
+                    Reportar uma ocorrência
                   </Button>
                 </Link>
               ) : (
                 <Link to="/signup">
                   <Button size="lg" className="text-lg px-8 py-6">
-                    Get Started
+                    Começar agora
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </Link>
@@ -54,7 +53,7 @@ const Index = () => {
               <Link to="/map">
                 <Button variant="outline" size="lg" className="text-lg px-8 py-6">
                   <MapPin className="h-5 w-5 mr-2" />
-                  View Map
+                  Ver no mapa
                 </Button>
               </Link>
             </div>
@@ -75,25 +74,25 @@ const Index = () => {
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="text-3xl font-bold text-primary mb-2">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total Issues</div>
+                <div className="text-sm text-muted-foreground">Total de ocorrências</div>
               </CardContent>
             </Card>
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="text-3xl font-bold text-green-600 mb-2">{stats.resolved}</div>
-                <div className="text-sm text-muted-foreground">Resolved</div>
+                <div className="text-sm text-muted-foreground">Resolvidas</div>
               </CardContent>
             </Card>
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="text-3xl font-bold text-amber-500 mb-2">{stats.inProgress}</div>
-                <div className="text-sm text-muted-foreground">In Progress</div>
+                <div className="text-sm text-muted-foreground">Em andamento</div>
               </CardContent>
             </Card>
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="text-3xl font-bold text-red-500 mb-2">{stats.open}</div>
-                <div className="text-sm text-muted-foreground">Open</div>
+                <div className="text-sm text-muted-foreground">Por resolver</div>
               </CardContent>
             </Card>
           </div>
@@ -105,10 +104,10 @@ const Index = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              How CivicSpot Works
+              O que é o Vamos Recuperar?
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Three simple steps to make a difference in your community
+              Três passos simples para fazer a diferença na tua comunidade
             </p>
           </div>
           
@@ -118,9 +117,9 @@ const Index = () => {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <MapPin className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Report Issues</CardTitle>
+                <CardTitle>Reportar</CardTitle>
                 <CardDescription>
-                  Spot a problem? Take a photo, add location details, and submit your report in seconds.
+                  Encontraste um problema? Tira uma foto, adiciona a localização e submete em segundos.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -130,9 +129,9 @@ const Index = () => {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Track Progress</CardTitle>
+                <CardTitle>Acompanhar</CardTitle>
                 <CardDescription>
-                  Follow your reports and see real-time updates as local authorities work to resolve issues.
+                  Segue as tuas ocorrências e vê atualizações à medida que a solução avança.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -142,9 +141,9 @@ const Index = () => {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>See Results</CardTitle>
+                <CardTitle>Ver Impacto</CardTitle>
                 <CardDescription>
-                  Watch as your community improves with each resolved issue and successful collaboration.
+                  Vê a comunidade melhorar com cada ocorrência resolvida e cada ação concluída.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -156,10 +155,10 @@ const Index = () => {
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to Make a Difference?
+            Pronto para fazer a diferença?
           </h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Join thousands of citizens who are actively improving their communities through CivicSpot.
+            Junta-te a cidadãos que estão a melhorar as suas comunidades — de forma simples, rápida e transparente.
           </p>
           {user ? (
             <Link to={userHasReportedIssues ? "/my-reports" : "/report"}>
@@ -167,12 +166,12 @@ const Index = () => {
                 {userHasReportedIssues ? (
                   <>
                     <CheckCircle className="h-5 w-5 mr-2" />
-                    View My Reports
+                    Ver as minhas ocorrências
                   </>
                 ) : (
                   <>
                     <Plus className="h-5 w-5 mr-2" />
-                    Report Your First Issue
+                    Reportar a primeira ocorrência
                   </>
                 )}
               </Button>
@@ -181,12 +180,12 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
                 <Button variant="secondary" size="lg" className="text-lg px-8 py-6">
-                  Sign Up Now
+                  Criar conta
                 </Button>
               </Link>
               <Link to="/login">
                 <Button variant="outline" size="lg" className="text-lg px-8 py-6 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                  Already have an account?
+                  Já tenho conta
                 </Button>
               </Link>
             </div>

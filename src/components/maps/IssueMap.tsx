@@ -1,19 +1,16 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useIssues, IssueCategory, IssueStatus } from "@/contexts/IssueContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus, Filter, Layers } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import IssueFilterControl from "./IssueFilterControl";
+import { Plus, Filter } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import IssueFilterControl from "./IssueFilterControl";
 import { GOOGLE_MAPS_API_KEY, GOOGLE_MAP_ID } from "@/config/constants";
 import { logger } from "@/lib/logger";
 import { googleMapsLoader } from "@/lib/googleMapsLoader";
-import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Ayodhya coordinates
-const AYODHYA_COORDINATES = { lat: 26.7922, lng: 82.1998 };
+const LEIRIA_COORDINATES = { lat: 39.744, lng: -8.807 };
 
 interface IssueMapProps {
   onIssueSelect?: (issueId: string) => void;
@@ -21,190 +18,211 @@ interface IssueMapProps {
   enableFilters?: boolean;
 }
 
+type AnyMarker = any;
+
 const IssueMap: React.FC<IssueMapProps> = ({
   onIssueSelect,
   height = "h-[calc(100vh-64px)]",
   enableFilters = true,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const mapRef = useRef<any>(null);
+
+  // ✅ mantém callback estável (não rebenta markers quando a page re-renderiza)
+  const onIssueSelectRef = useRef<IssueMapProps["onIssueSelect"]>(onIssueSelect);
+  useEffect(() => {
+    onIssueSelectRef.current = onIssueSelect;
+  }, [onIssueSelect]);
+
+  // markers para cleanup
+  const markersRef = useRef<AnyMarker[]>([]);
+
   const { issues } = useIssues();
   const { user } = useAuth();
+
   const [selectedFilters, setSelectedFilters] = useState<{
     category?: IssueCategory;
     status?: IssueStatus;
   }>({});
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Filter issues based on the selected filters
-  const filteredIssues = issues.filter((issue) => {
-    if (
-      selectedFilters.category &&
-      issue.category !== selectedFilters.category
-    ) {
-      return false;
-    }
-    if (selectedFilters.status && issue.status !== selectedFilters.status) {
-      return false;
-    }
-    return true;
-  });
+  const filteredIssues = useMemo(() => {
+    return issues.filter((issue) => {
+      if (
+        selectedFilters.category &&
+        issue.category !== selectedFilters.category
+      )
+        return false;
+      if (selectedFilters.status && issue.status !== selectedFilters.status)
+        return false;
+      return true;
+    });
+  }, [issues, selectedFilters]);
 
-  // Initialize Google Maps when component mounts
+  // Init map
   useEffect(() => {
     const initializeMap = async () => {
-      console.log("API Key loaded:", !!GOOGLE_MAPS_API_KEY);
       if (!GOOGLE_MAPS_API_KEY) return;
+      if (!mapContainer.current) return;
+      if (mapRef.current) return;
 
-      if (!map.current && mapContainer.current) {
-        try {
-          const { Map } = (await googleMapsLoader.importLibrary("maps")) as any;
-          const { AdvancedMarkerElement } =
-            (await googleMapsLoader.importLibrary("marker")) as any;
+      try {
+        const { Map } = (await googleMapsLoader.importLibrary("maps")) as any;
 
-          map.current = new Map(mapContainer.current, {
-            center: AYODHYA_COORDINATES,
-            zoom: 14,
-            mapId: GOOGLE_MAP_ID,
-            disableDefaultUI: false,
-            zoomControl: true,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-          });
+        mapRef.current = new Map(mapContainer.current, {
+          center: LEIRIA_COORDINATES,
+          zoom: 12,
+          mapId: GOOGLE_MAP_ID,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          clickableIcons: false,
+        });
 
-          setMapLoaded(true);
-          setMapError(null);
-
-          // Add city center marker
-          const cityMarker = new AdvancedMarkerElement({
-            map: map.current,
-            position: AYODHYA_COORDINATES,
-            title: "Ayodhya City Center",
-          });
-        } catch (error) {
-          logger.error("Error initializing Google Maps:", error);
-          setMapError(
-            "Failed to initialize map. Please check your API key and connection."
-          );
-        }
+        setMapLoaded(true);
+        setMapError(null);
+      } catch (error) {
+        logger.error("Error initializing Google Maps:", error);
+        setMapError(
+          "Falha ao inicializar o mapa. Confirma a API key, Map ID e permissões."
+        );
       }
     };
 
     initializeMap();
 
-    // Clean up on unmount
     return () => {
-      markersRef.current.forEach((marker) => {
-        marker.setMap(null);
+      // cleanup markers
+      markersRef.current.forEach((m) => {
+        try {
+          if ("map" in m) m.map = null; // AdvancedMarkerElement
+          if (typeof m.setMap === "function") m.setMap(null); // Classic Marker
+        } catch {}
       });
       markersRef.current = [];
+      mapRef.current = null;
     };
   }, []);
 
-  // Add markers when issues or filters change
+  // Render markers
   useEffect(() => {
-    const addMarkers = async () => {
-      if (!map.current || !mapLoaded || !GOOGLE_MAPS_API_KEY) return;
+    const renderMarkers = async () => {
+      if (!mapRef.current || !mapLoaded || !GOOGLE_MAPS_API_KEY) return;
 
-      // Clear existing markers
-      markersRef.current.forEach((marker) => {
-        marker.setMap(null);
+      // limpa markers anteriores
+      markersRef.current.forEach((m) => {
+        try {
+          if ("map" in m) m.map = null;
+          if (typeof m.setMap === "function") m.setMap(null);
+        } catch {}
       });
       markersRef.current = [];
 
-      const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
-        "marker"
-      )) as any;
-      const { InfoWindow } = (await googleMapsLoader.importLibrary(
-        "maps"
-      )) as any;
+      let AdvancedMarkerElement: any = null;
 
-      // Add markers for filtered issues
+      try {
+        const markerLib = (await googleMapsLoader.importLibrary(
+          "marker"
+        )) as any;
+        AdvancedMarkerElement = markerLib?.AdvancedMarkerElement ?? null;
+      } catch {
+        AdvancedMarkerElement = null;
+      }
+
+      const g = (window as any).google;
+
       filteredIssues.forEach((issue) => {
-        // Create marker element
-        const markerEl = document.createElement("div");
-        markerEl.className = "relative cursor-pointer";
-        markerEl.style.width = "24px";
-        markerEl.style.height = "24px";
+        const lat = Number(issue.location.latitude);
+        const lng = Number(issue.location.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-        // Create colored pin
-        const pin = document.createElement("div");
-        pin.className =
-          "w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-white";
+        const handleSelect = () => {
+          // ✅ usa ref estável (não depende de re-renders)
+          onIssueSelectRef.current?.(issue.id);
+        };
 
-        // Set color based on issue status
-        switch (issue.status) {
-          case "open":
-            pin.style.backgroundColor = "#ef4444"; // red-500
-            break;
-          case "in_progress":
-            pin.style.backgroundColor = "#f59e0b"; // amber-500
-            break;
-          case "resolved":
-            pin.style.backgroundColor = "#16a34a"; // green-600
-            break;
-          default:
-            pin.style.backgroundColor = "#3b82f6"; // blue-500
+        // 1) AdvancedMarker
+        if (AdvancedMarkerElement) {
+          const markerEl = document.createElement("div");
+          markerEl.className = "relative cursor-pointer";
+          markerEl.style.width = "24px";
+          markerEl.style.height = "24px";
+
+          const pin = document.createElement("div");
+          pin.className =
+            "w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-2 border-white";
+
+          switch (issue.status) {
+            case "open":
+              pin.style.backgroundColor = "#ef4444";
+              break;
+            case "in_progress":
+              pin.style.backgroundColor = "#f59e0b";
+              break;
+            case "resolved":
+              pin.style.backgroundColor = "#16a34a";
+              break;
+            default:
+              pin.style.backgroundColor = "#3b82f6";
+          }
+
+          const dot = document.createElement("div");
+          dot.className = "w-2 h-2 bg-white rounded-full";
+          pin.appendChild(dot);
+          markerEl.appendChild(pin);
+
+          const advMarker = new AdvancedMarkerElement({
+            map: mapRef.current,
+            position: { lat, lng },
+            content: markerEl,
+            title: issue.title,
+          });
+
+          // ✅ evento correto para AdvancedMarker
+          advMarker.addListener?.("gmp-click", handleSelect);
+
+          // fallback de clique no HTML
+          markerEl.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSelect();
+          });
+
+          markersRef.current.push(advMarker);
+          return;
         }
 
-        // Add inner white dot
-        const dot = document.createElement("div");
-        dot.className = "w-2 h-2 bg-white rounded-full";
-        pin.appendChild(dot);
-        markerEl.appendChild(pin);
+        // 2) Classic Marker fallback
+        if (g?.maps?.Marker) {
+          const classicMarker = new g.maps.Marker({
+            map: mapRef.current,
+            position: { lat, lng },
+            title: issue.title,
+          });
 
-        const marker = new AdvancedMarkerElement({
-          map: map.current,
-          position: {
-            lat: issue.location.latitude,
-            lng: issue.location.longitude,
-          },
-          content: markerEl,
-          title: issue.title,
-        });
+          classicMarker.addListener("click", handleSelect);
+          markersRef.current.push(classicMarker);
+          return;
+        }
 
-        // Create info window
-        const infoWindow = new InfoWindow({
-          content: `
-            <div class="p-2">
-              <h3 class="font-medium text-gray-900 text-sm">${issue.title}</h3>
-              <p class="text-xs text-gray-600 mt-1">${issue.category.replace(
-                "_",
-                " "
-              )}</p>
-              <div class="mt-2 text-right">
-                <a href="/issue/${
-                  issue.id
-                }" class="text-sm font-medium text-blue-600">View details</a>
-              </div>
-            </div>
-          `,
-        });
-
-        // Add click listeners
-        markerEl.addEventListener("click", () => {
-          infoWindow.open(map.current, marker);
-          if (onIssueSelect) {
-            onIssueSelect(issue.id);
-          }
-        });
-
-        markersRef.current.push(marker);
+        logger.error(
+          "No marker implementation available (AdvancedMarker/Marker)."
+        );
       });
     };
 
-    addMarkers();
-  }, [issues, filteredIssues, mapLoaded, onIssueSelect]);
+    renderMarkers();
+    // ✅ NOTA: de propósito NÃO depende do onIssueSelect (evita piscar)
+  }, [filteredIssues, mapLoaded]);
 
   const handleFilterChange = (filters: {
     category?: IssueCategory;
     status?: IssueStatus;
-  }) => {
-    setSelectedFilters(filters);
-  };
+  }) => setSelectedFilters(filters);
 
   return (
     <div className={`relative ${height} w-full`}>
@@ -215,19 +233,10 @@ const IssueMap: React.FC<IssueMapProps> = ({
               Google Maps API Key Required
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Please add your Google Maps API key to{" "}
+              Adiciona a tua Google Maps API key e Map ID em{" "}
               <code className="bg-gray-100 px-1 rounded">
                 src/config/constants.ts
               </code>
-              . Get your key from{" "}
-              <a
-                href="https://console.cloud.google.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-              >
-                Google Cloud Console
-              </a>
               .
             </p>
           </div>
@@ -241,13 +250,12 @@ const IssueMap: React.FC<IssueMapProps> = ({
           <div className="bg-white p-4 rounded shadow-lg text-center">
             <p className="text-red-500 mb-2">{mapError}</p>
             <p className="text-sm text-gray-600">
-              Please check your API key and internet connection.
+              Confirma API key, Map ID, e “HTTP referrers” autorizados.
             </p>
           </div>
         </div>
       )}
 
-      {/* Google Maps controls */}
       {mapLoaded && (
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
           {enableFilters && (
@@ -258,47 +266,45 @@ const IssueMap: React.FC<IssueMapProps> = ({
                   className="bg-white shadow-md border-0 hover:bg-gray-100"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  Filter Issues
+                  Filtrar
                 </Button>
               </DrawerTrigger>
               <DrawerContent>
                 <div className="p-4 max-w-md mx-auto">
-                  <h3 className="text-lg font-semibold mb-4">Filter Issues</h3>
+                  <h3 className="text-lg font-semibold mb-4">Filtrar Reports</h3>
                   <IssueFilterControl onChange={handleFilterChange} />
                 </div>
               </DrawerContent>
             </Drawer>
           )}
 
+          {/* ✅ só logged-in consegue reportar */}
           {user && (
             <Link to="/report">
               <Button className="bg-white text-gray-700 hover:bg-gray-100 shadow-md border-0">
                 <Plus className="h-4 w-4 mr-2" />
-                Report Issue
+                Reportar
               </Button>
             </Link>
           )}
         </div>
       )}
 
-      {/* Status indicator */}
       {mapLoaded && (
         <div className="absolute bottom-8 left-4 z-10 bg-white rounded-md shadow-md p-3">
-          <div className="text-xs font-medium text-gray-500 mb-2">
-            Issue Status:
-          </div>
+          <div className="text-xs font-medium text-gray-500 mb-2">Estado:</div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-xs text-gray-700">Open</span>
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <span className="text-xs text-gray-700">Aberto</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-              <span className="text-xs text-gray-700">In Progress</span>
+              <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <span className="text-xs text-gray-700">Em progresso</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-600"></div>
-              <span className="text-xs text-gray-700">Resolved</span>
+              <div className="w-3 h-3 rounded-full bg-green-600" />
+              <span className="text-xs text-gray-700">Resolvido</span>
             </div>
           </div>
         </div>

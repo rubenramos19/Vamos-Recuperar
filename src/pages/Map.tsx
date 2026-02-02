@@ -1,12 +1,7 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import IssueMap from "@/components/maps/IssueMap";
-import { useIssues, Issue } from "@/contexts/IssueContext";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { useIssues } from "@/contexts/IssueContext";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import IssueDetail from "@/components/issues/IssueDetail";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -16,13 +11,17 @@ import { Plus } from "lucide-react";
 const Map = () => {
   const { user } = useAuth();
   const { issues } = useIssues();
+
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
-  const selectedIssue = issues.find((issue) => issue.id === selectedIssueId);
+  const selectedIssue = useMemo(() => {
+    if (!selectedIssueId) return undefined;
+    return issues.find((issue) => issue.id === selectedIssueId);
+  }, [issues, selectedIssueId]);
 
-  const handleIssueSelect = (issueId: string) => {
+  const handleIssueSelect = useCallback((issueId: string) => {
     setSelectedIssueId(issueId);
-  };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">
@@ -30,10 +29,15 @@ const Map = () => {
         <IssueMap onIssueSelect={handleIssueSelect} />
 
         {selectedIssue && (
-          <Sheet open={!!selectedIssueId} onOpenChange={() => setSelectedIssueId(null)}>
+          <Sheet
+            open={!!selectedIssueId}
+            onOpenChange={(open) => {
+              if (!open) setSelectedIssueId(null);
+            }}
+          >
             <SheetContent className="sm:max-w-md overflow-y-auto">
               <SheetHeader>
-                <SheetTitle>Issue Details</SheetTitle>
+                <SheetTitle>Detalhes da Ocorrência</SheetTitle>
               </SheetHeader>
               <div className="mt-6">
                 <IssueDetail issue={selectedIssue} />
@@ -42,6 +46,7 @@ const Map = () => {
           </Sheet>
         )}
 
+        {/* Report só com login */}
         {user && (
           <div className="fixed right-4 bottom-4 md:hidden">
             <Link to="/report">

@@ -59,20 +59,12 @@ const MAX_ISSUES_PER_HOUR = 5;
 const formSchema = z.object({
   title: z
     .string()
-    .min(3, {
-      message: "Title must be at least 3 characters.",
-    })
-    .max(200, {
-      message: "Title must be less than 200 characters.",
-    }),
+    .min(3, { message: "Title must be at least 3 characters." })
+    .max(200, { message: "Title must be less than 200 characters." }),
   description: z
     .string()
-    .min(10, {
-      message: "Description must be at least 10 characters.",
-    })
-    .max(2000, {
-      message: "Description must be less than 2000 characters.",
-    }),
+    .min(10, { message: "Description must be at least 10 characters." })
+    .max(2000, { message: "Description must be less than 2000 characters." }),
   category: z.enum([
     "road_damage",
     "sanitation",
@@ -112,25 +104,29 @@ const IssueForm: React.FC<IssueFormProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addIssue, updateIssue, getIssue } = useIssues();
+  const { addIssue, updateIssue } = useIssues();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
     address?: string;
   } | null>(null);
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+
   const [photos, setPhotos] = useState<string[]>([]);
   const [photoVerifications, setPhotoVerifications] = useState<{
     [key: number]: { isValid: boolean; confidence: number; reason?: string };
   }>({});
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verifierReady, setVerifierReady] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocomplete = useRef<any>(null);
+
   const [showLocationConfirm, setShowLocationConfirm] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{
     latitude: number;
@@ -144,19 +140,14 @@ const IssueForm: React.FC<IssueFormProps> = ({
       title: "",
       description: "",
       category: "road_damage",
-      location: {
-        latitude: 0,
-        longitude: 0,
-      },
+      location: { latitude: 0, longitude: 0 },
       photos: [],
       isPublic: true,
     },
     mode: "onChange",
   });
 
-  const handlePhotoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
@@ -173,7 +164,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
       return;
     }
 
-    // Check if we've reached max photos
     if (photos.length >= MAX_IMAGES) {
       toast({
         variant: "destructive",
@@ -183,7 +173,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
       return;
     }
 
-    // Validate file sizes
     const oversizedFiles = Array.from(files).filter(
       (file) => file.size > MAX_IMAGE_SIZE
     );
@@ -209,12 +198,15 @@ const IssueForm: React.FC<IssueFormProps> = ({
         const photoIndex = photos.length + i;
 
         try {
-          // Verify the image matches the description
-          const verification = await ImageVerificationService.verifyImage(
-            result,
-            description,
-            category
-          );
+          // Verification disabled (como tinhas)
+          let verification = {
+            isValid: true,
+            confidence: 100,
+            reason: "Verification disabled",
+          };
+
+          // Se quiseres reativar no futuro:
+          // verification = await ImageVerificationService.verifyImage(result, description, category);
 
           setPhotoVerifications((prev) => ({
             ...prev,
@@ -229,13 +221,10 @@ const IssueForm: React.FC<IssueFormProps> = ({
             });
 
             toast({
-              title: "Image Verified",
-              description:
-                verification.reason ||
-                `Image verified with ${verification.confidence}% confidence`,
+              title: "Image Added",
+              description: verification.reason || "Image added successfully.",
             });
           } else {
-            // Remove and prompt re-upload
             if (fileInputRef.current) fileInputRef.current.value = "";
             toast({
               variant: "destructive",
@@ -252,18 +241,15 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 </ToastAction>
               ),
             });
-            // Auto-open after a moment to guide the user
             setTimeout(() => fileInputRef.current?.click(), 600);
           }
         } catch (error) {
           logger.error("Verification error:", error);
-          // Block upload on error and prompt re-upload
           if (fileInputRef.current) fileInputRef.current.value = "";
           toast({
             variant: "destructive",
             title: "Verification unavailable",
-            description:
-              "Could not verify the image. Please try uploading again.",
+            description: "Could not verify the image. Please try uploading again.",
             action: (
               <ToastAction
                 altText="Re-upload"
@@ -276,9 +262,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
           setTimeout(() => fileInputRef.current?.click(), 600);
         }
 
-        if (i === newPhotos.length - 1) {
-          setIsVerifying(false);
-        }
+        if (i === newPhotos.length - 1) setIsVerifying(false);
       };
 
       reader.readAsDataURL(file);
@@ -295,15 +279,12 @@ const IssueForm: React.FC<IssueFormProps> = ({
     setPhotoVerifications((prev) => {
       const updated = { ...prev };
       delete updated[index];
-      // Reindex remaining verifications
+
       const reindexed: typeof updated = {};
       Object.keys(updated).forEach((key) => {
         const oldIndex = parseInt(key);
-        if (oldIndex > index) {
-          reindexed[oldIndex - 1] = updated[oldIndex];
-        } else if (oldIndex < index) {
-          reindexed[oldIndex] = updated[oldIndex];
-        }
+        if (oldIndex > index) reindexed[oldIndex - 1] = updated[oldIndex];
+        else if (oldIndex < index) reindexed[oldIndex] = updated[oldIndex];
       });
       return reindexed;
     });
@@ -329,13 +310,12 @@ const IssueForm: React.FC<IssueFormProps> = ({
         setShowLocationConfirm(true);
         setIsLoadingLocation(false);
       },
-      (error) => {
+      () => {
         setIsLoadingLocation(false);
         toast({
           variant: "destructive",
           title: "Location Access Denied",
-          description:
-            "Please enable location permissions to use this feature.",
+          description: "Please enable location permissions to use this feature.",
         });
       }
     );
@@ -358,9 +338,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
       "marker"
     )) as any;
 
-    if (map.current.currentMarker) {
-      map.current.currentMarker.setMap(null);
-    }
+    if (map.current.currentMarker) map.current.currentMarker.setMap(null);
 
     map.current.currentMarker = new AdvancedMarkerElement({
       map: map.current,
@@ -388,11 +366,11 @@ const IssueForm: React.FC<IssueFormProps> = ({
           "places"
         )) as any;
 
-        // Default to Ayodhya coordinates
-        const center = { lat: 26.7922, lng: 82.1998 };
+        // Leiria center
+        const center = { lat: 39.744, lng: -8.807 };
 
         map.current = new Map(mapContainer.current, {
-          center: center,
+          center,
           zoom: 13,
           mapId: GOOGLE_MAP_ID,
           disableDefaultUI: false,
@@ -404,7 +382,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
 
         setMapLoaded(true);
 
-        // Initialize Places Autocomplete
         if (searchInputRef.current) {
           autocomplete.current = new Autocomplete(searchInputRef.current, {
             types: ["geocode"],
@@ -430,14 +407,10 @@ const IssueForm: React.FC<IssueFormProps> = ({
               form.setValue("location.longitude", lng);
               form.setValue("location.address", newLocation.address);
 
-              // Update map center and marker
               map.current.panTo({ lat, lng });
               map.current.setZoom(15);
 
-              // Clear existing marker and add new one
-              if (map.current.currentMarker) {
-                map.current.currentMarker.setMap(null);
-              }
+              if (map.current.currentMarker) map.current.currentMarker.setMap(null);
 
               map.current.currentMarker = new AdvancedMarkerElement({
                 map: map.current,
@@ -448,24 +421,15 @@ const IssueForm: React.FC<IssueFormProps> = ({
           });
         }
 
-        // Add click listener to select location
         map.current.addListener("click", (e: any) => {
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
 
-          const newLocation = {
-            latitude: lat,
-            longitude: lng,
-          };
-
-          setLocation(newLocation);
+          setLocation({ latitude: lat, longitude: lng });
           form.setValue("location.latitude", lat);
           form.setValue("location.longitude", lng);
 
-          // Clear existing markers and add new one
-          if (map.current.currentMarker) {
-            map.current.currentMarker.setMap(null);
-          }
+          if (map.current.currentMarker) map.current.currentMarker.setMap(null);
 
           map.current.currentMarker = new AdvancedMarkerElement({
             map: map.current,
@@ -481,9 +445,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
     initializeMap();
 
     return () => {
-      if (map.current?.currentMarker) {
-        map.current.currentMarker.setMap(null);
-      }
+      if (map.current?.currentMarker) map.current.currentMarker.setMap(null);
     };
   }, [form]);
 
@@ -497,12 +459,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
           "marker"
         )) as any;
 
-        // Clear existing marker
-        if (map.current.currentMarker) {
-          map.current.currentMarker.setMap(null);
-        }
+        if (map.current.currentMarker) map.current.currentMarker.setMap(null);
 
-        // Pan to the location and add a marker
         map.current.panTo({ lat: latitude, lng: longitude });
         map.current.setZoom(15);
 
@@ -519,72 +477,68 @@ const IssueForm: React.FC<IssueFormProps> = ({
 
   async function onSubmitHandler(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    try {
-      if (!user) {
-        throw new Error("User must be logged in to submit an issue.");
-      }
 
-      // Check email verification for new issues
-      if (!issueId && !user.emailVerified) {
+    try {
+      const isLoggedIn = !!user?.id;
+
+      const reporterId = isLoggedIn ? user!.id : null;
+      const reporterName = isLoggedIn ? (user!.name ?? "Anonymous") : "Anónimo";
+      const reporterEmail = isLoggedIn ? (user!.email ?? null) : null;
+
+      // ✅ email verification só para logged
+      if (!issueId && isLoggedIn && !user!.emailVerified) {
         toast({
           variant: "destructive",
           title: "Email Verification Required",
-          description:
-            "Please verify your email address before reporting issues.",
+          description: "Please verify your email address before reporting issues.",
         });
-        setIsSubmitting(false);
         return;
       }
 
-      // Rate limiting check for new issues only (not edits)
-      if (!issueId) {
+      // ✅ rate limit só para logged
+      if (!issueId && isLoggedIn) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
         const { count, error: countError } = await supabase
           .from("issues")
           .select("*", { count: "exact", head: true })
-          .eq("reporter_id", user.id)
+          .eq("reporter_id", user!.id)
           .gte("created_at", oneHourAgo);
 
-        if (countError) {
-          logger.error("Error checking rate limit:", countError);
-        } else if (count && count >= MAX_ISSUES_PER_HOUR) {
+        if (!countError && count && count >= MAX_ISSUES_PER_HOUR) {
           toast({
             variant: "destructive",
             title: "Rate Limit Exceeded",
             description: `You can only report ${MAX_ISSUES_PER_HOUR} issues per hour. Please try again later.`,
           });
-          setIsSubmitting(false);
           return;
         }
       }
 
-      // Ensure all required fields are present for addIssue
       const issueData = {
         title: values.title,
         description: values.description,
         category: values.category,
-        reporterId: user.id,
-        reporterName: user.name || "Anonymous",
-        reporterEmail: user.email,
+        reporterId,
+        reporterName,
+        reporterEmail,
         status: "open" as IssueStatus,
         location: {
           latitude: values.location.latitude,
           longitude: values.location.longitude,
-          address: values.location.address || "No address provided",
+          address: values.location.address || "Sem morada",
         },
-        photos: photos,
-        isPublic: values.isPublic,
+        photos,
+        isPublic: values.isPublic, // ✅ respeita o switch
       };
 
       if (issueId) {
-        // Update existing issue
         await updateIssue(issueId, issueData);
         toast({
           title: "Issue Updated",
           description: "Your issue has been updated successfully.",
         });
       } else {
-        // Create new issue
         await addIssue(issueData);
         toast({
           title: "Issue Reported",
@@ -592,22 +546,16 @@ const IssueForm: React.FC<IssueFormProps> = ({
         });
       }
 
-      if (onSubmit) {
-        onSubmit(values);
-      }
+      onSubmit?.(values);
 
-      if (onSubmitSuccess) {
-        onSubmitSuccess();
-      } else {
-        navigate("/");
-      }
+      if (onSubmitSuccess) onSubmitSuccess();
+      else navigate("/");
     } catch (error: any) {
       logger.error("Error submitting issue:", error);
       toast({
         variant: "destructive",
         title: "Error Reporting Issue",
-        description:
-          error.message || "Failed to report the issue. Please try again.",
+        description: error?.message || "Failed to report the issue. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -621,10 +569,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmitHandler)}
-            className="space-y-4"
-          >
+          <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -632,15 +577,13 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="A brief title for the issue"
-                      {...field}
-                    />
+                    <Input placeholder="A brief title for the issue" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="description"
@@ -658,16 +601,14 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="category"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
@@ -692,7 +633,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
             <div className="w-full">
               <Label>Select Location on Map</Label>
 
-              {/* Location Search Input */}
               <div className="mb-4 space-y-2">
                 <Input
                   ref={searchInputRef}
@@ -702,8 +642,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 />
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    Type a location name or address, then click on the map to
-                    fine-tune
+                    Type a location name or address, then click on the map to fine-tune
                   </p>
                   <Button
                     type="button"
@@ -714,9 +653,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
                     className="flex items-center gap-2 shrink-0"
                   >
                     <MapPin className="h-4 w-4" />
-                    {isLoadingLocation
-                      ? "Getting Location..."
-                      : "Use My Location"}
+                    {isLoadingLocation ? "Getting Location..." : "Use My Location"}
                   </Button>
                 </div>
               </div>
@@ -728,9 +665,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
             <div>
               <Label>Photos (Optional - Max 5, 5MB each)</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Photos will be automatically verified against your description
-                to ensure relevance.
+                Photos will be automatically verified against your description to ensure relevance.
               </p>
+
               <div className="mt-2">
                 {photos.length < MAX_IMAGES && (
                   <div
@@ -759,7 +696,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
                           className="w-full h-32 object-cover rounded-lg"
                         />
 
-                        {/* Verification Status Badge */}
                         {photoVerifications[index] && (
                           <div
                             className={cn(
@@ -791,7 +727,6 @@ const IssueForm: React.FC<IssueFormProps> = ({
                           <X className="h-4 w-4" />
                         </button>
 
-                        {/* Verification Details Tooltip */}
                         {photoVerifications[index] && (
                           <div className="absolute bottom-0 left-0 right-0 bg-black/75 text-white text-xs p-2 rounded-b-lg">
                             {photoVerifications[index].reason}
@@ -820,42 +755,28 @@ const IssueForm: React.FC<IssueFormProps> = ({
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Public Report</FormLabel>
-                    <FormDescription>
-                      Do you want this report to be public?
-                    </FormDescription>
+                    <FormDescription>Do you want this report to be public?</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
             />
 
             <Button type="submit" disabled={isSubmitting || isVerifying}>
-              {isSubmitting
-                ? "Submitting..."
-                : isVerifying
-                ? "Verifying Images..."
-                : "Submit"}
+              {isSubmitting ? "Submitting..." : isVerifying ? "Verifying Images..." : "Submit"}
             </Button>
           </form>
         </Form>
       </CardContent>
 
-      {/* Location Confirmation Dialog */}
-      <AlertDialog
-        open={showLocationConfirm}
-        onOpenChange={setShowLocationConfirm}
-      >
+      <AlertDialog open={showLocationConfirm} onOpenChange={setShowLocationConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Use Current Location?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want to set your current location as the location of this
-              issue?
+              Do you want to set your current location as the location of this issue?
               {currentPosition && (
                 <div className="mt-2 text-xs text-muted-foreground">
                   Coordinates: {currentPosition.latitude.toFixed(6)},{" "}

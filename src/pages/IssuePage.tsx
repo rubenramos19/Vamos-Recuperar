@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useIssues } from "@/contexts/IssueContext";
@@ -36,11 +35,11 @@ const IssuePage = () => {
       <div className="mb-6 flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate(-1)} className="flex items-center">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          Voltar
         </Button>
         <div className="flex items-center text-sm text-muted-foreground">
           <MapPin className="mr-1 h-4 w-4" />
-          <span>Issue #{issue.id}</span>
+          <span>Ocorrência #{issue.id}</span>
         </div>
       </div>
 

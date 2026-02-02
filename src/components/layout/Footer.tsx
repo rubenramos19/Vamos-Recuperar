@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -14,27 +13,38 @@ const Footer = () => {
                   <div className="h-3 w-3 bg-primary rounded-full"></div>
                 </div>
               </div>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">CivicSpot</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                Vamos Recuperar
+              </span>
             </Link>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Empowering citizens to improve their communities
+              Uma plataforma feita por cidadãos para fortalecer e melhorar as nossas comunidades
             </p>
           </div>
           
           <div className="flex flex-col items-center md:items-end">
             <div className="flex space-x-4 mb-2">
-              <Link to="/about" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground">
-                About
+              <Link
+                to="/about"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground"
+              >
+                Sobre
               </Link>
-              <Link to="/privacy" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground">
-                Privacy
+              <Link
+                to="/privacy"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground"
+              >
+                Privacidade
               </Link>
-              <Link to="/terms" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground">
-                Terms
+              <Link
+                to="/terms"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-foreground"
+              >
+                Termos
               </Link>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              © {new Date().getFullYear()} CivicSpot. All rights reserved.
+              © {new Date().getFullYear()} Vamos Recuperar. Todos os direitos reservados.
             </p>
           </div>
         </div>

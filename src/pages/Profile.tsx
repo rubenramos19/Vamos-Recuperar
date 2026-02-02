@@ -17,7 +17,7 @@ const Profile = () => {
   if (loading) {
     return (
       <div className="container max-w-2xl mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">A carregar...</div>
       </div>
     );
   }
@@ -30,9 +30,9 @@ const Profile = () => {
     <div className="container max-w-2xl mx-auto px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
+          <CardTitle>Definições de Perfil</CardTitle>
           <CardDescription>
-            Update your profile information and avatar
+            Atualiza as tuas informações e a tua imagem de utilizador
           </CardDescription>
         </CardHeader>
         <CardContent>

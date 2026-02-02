@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useIssues } from "@/contexts/IssueContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,10 +58,10 @@ const MyReports = () => {
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
         >
-          Previous
+          Anterior
         </Button>
         <span className="text-sm text-muted-foreground">
-          Page {page} of {totalPages}
+          Página {page} de {totalPages}
         </span>
         <Button
           variant="outline"
@@ -70,7 +69,7 @@ const MyReports = () => {
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
         >
-          Next
+          Seguinte
         </Button>
       </div>
     );
@@ -80,30 +79,30 @@ const MyReports = () => {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">My Reports</h1>
+          <h1 className="text-2xl font-bold">As Minhas Ocorrências</h1>
           <p className="text-muted-foreground mt-1">
-            Track and manage all the issues you've reported
+            Acompanha e gere todas as ocorrências que reportaste
           </p>
         </div>
         <Link to="/report">
           <Button className="hidden sm:flex">
             <Plus className="mr-2 h-4 w-4" />
-            Report New Issue
+            Reportar nova ocorrência
           </Button>
         </Link>
       </div>
 
       <Tabs defaultValue="all" onValueChange={() => setCurrentPage(1)}>
         <TabsList className="mb-4">
-          <TabsTrigger value="all">All ({userIssues.length})</TabsTrigger>
+          <TabsTrigger value="all">Todas ({userIssues.length})</TabsTrigger>
           <TabsTrigger value="open">
-            Open ({openIssues.length})
+            Por resolver ({openIssues.length})
           </TabsTrigger>
           <TabsTrigger value="in_progress">
-            In Progress ({inProgressIssues.length})
+            Em andamento ({inProgressIssues.length})
           </TabsTrigger>
           <TabsTrigger value="resolved">
-            Resolved ({resolvedIssues.length})
+            Resolvidas ({resolvedIssues.length})
           </TabsTrigger>
         </TabsList>
 
@@ -119,12 +118,12 @@ const MyReports = () => {
             </>
           ) : (
             <div className="text-center p-8">
-              <h3 className="text-lg font-medium mb-2">No issues found</h3>
+              <h3 className="text-lg font-medium mb-2">Ainda não há ocorrências</h3>
               <p className="text-muted-foreground mb-4">
-                You haven't reported any issues yet
+                Quando reportares algo, vai aparecer aqui para acompanhares o progresso
               </p>
               <Link to="/report">
-                <Button>Report your first issue</Button>
+                <Button>Reportar a primeira ocorrência</Button>
               </Link>
             </div>
           )}
@@ -142,7 +141,7 @@ const MyReports = () => {
             </>
           ) : (
             <p className="text-center text-muted-foreground p-8">
-              No open issues found
+              Não há ocorrências por resolver
             </p>
           )}
         </TabsContent>
@@ -159,7 +158,7 @@ const MyReports = () => {
             </>
           ) : (
             <p className="text-center text-muted-foreground p-8">
-              No issues in progress
+              Não há ocorrências em andamento
             </p>
           )}
         </TabsContent>
@@ -176,7 +175,7 @@ const MyReports = () => {
             </>
           ) : (
             <p className="text-center text-muted-foreground p-8">
-              No resolved issues yet
+              Ainda não há ocorrências resolvidas
             </p>
           )}
         </TabsContent>
