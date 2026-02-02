@@ -1,6 +1,6 @@
 # Vamos Recuperar 🌧️🤝
 
-O **Vamos Recuperar** é um projeto criado com o objetivo de **ajudar as pessoas afetadas pela uma tempestade**, oferecendo um espaço de apoio, informação e solidariedade.
+O **Vamos Recuperar** é um projeto criado com o objetivo de **ajudar as pessoas afetadas pela tempestade**, oferecendo um espaço de apoio, informação e solidariedade.
 
 Este projeto pretende facilitar a recuperação da comunidade, promovendo recursos úteis e iniciativas de ajuda.
 
