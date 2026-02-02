@@ -12,13 +12,18 @@ export default function PostForm({ onPublished }: { onPublished?: () => void }) 
     const userResp = await supabase.auth.getUser();
     const user = userResp.data.user;
     if (!user) return alert("É necessário iniciar sessão para publicar.");
-    await supabase.from("posts").insert([{
+    const { error } = await supabase.from("posts").insert([{
       user_id: user.id,
       title,
       content,
       is_event: isEvent,
       event_at: eventAt || null,
     }]);
+    if (error) {
+      console.error("Failed to insert post", error);
+      alert("Erro ao publicar: " + (error.message || error.code));
+      return;
+    }
     setTitle(""); setContent(""); setIsEvent(false); setEventAt("");
     onPublished?.();
   }

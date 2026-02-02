@@ -20,11 +20,13 @@ export default function PostCard({ post, onChange }: any) {
     const user = userResp.data.user;
     if (!user) return alert("Inicia sessão para gostar.");
     if (liked) {
-      await supabase.from("post_likes").delete().match({ post_id: post.id, user_id: user.id });
+      const { error } = await supabase.from("post_likes").delete().match({ post_id: post.id, user_id: user.id });
+      if (error) { console.error("Failed to unlike", error); alert("Erro ao remover gosto"); return; }
       setLiked(false);
       setLikes(l => l-1);
     } else {
-      await supabase.from("post_likes").insert([{ post_id: post.id, user_id: user.id }]);
+      const { error } = await supabase.from("post_likes").insert([{ post_id: post.id, user_id: user.id }]);
+      if (error) { console.error("Failed to like", error); alert("Erro ao gostar"); return; }
       setLiked(true);
       setLikes(l => l+1);
     }
