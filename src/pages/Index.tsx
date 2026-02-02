@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIssues } from "@/contexts/IssueContext";
 import { MapPin, Users, CheckCircle, Clock, Plus, ArrowRight } from "lucide-react";
+import IpmaAlerts from "@/components/alerts/IpmaAlerts";
+
 
 const Index = () => {
   const { user } = useAuth();
@@ -66,6 +68,11 @@ const Index = () => {
         </div>
       </section>
 
+    <section className="py-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <IpmaAlerts />
+        </div>
+      </section>
       {/* Stats Section */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
