@@ -1,6 +1,2 @@
-// Google Maps API configuration
-export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-export const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID;
-
-// This is safe to store in the frontend since Google Maps API keys are meant to be public
-// and can be restricted by domain in the Google Cloud Console
+// IPMA alerts endpoint (override with VITE_IPMA_ALERTS_URL in .env)
+export const IPMA_ALERTS_URL = import.meta.env.VITE_IPMA_ALERTS_URL ?? "https://api.ipma.pt/open-data/alerts.json";

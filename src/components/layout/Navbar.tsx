@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   Settings
+  ,Bell
 } from "lucide-react";
 import {
   Sheet,
@@ -32,15 +33,16 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { name: "Mapa", path: "/map", icon: <Map className="mr-2 h-4 w-4" /> },
+    { name: "Alertas", path: "/alerts", icon: <Bell className="mr-2 h-4 w-4" /> },
+    { name: "Ajudar", path: "/ajudar", icon: <UserPlus className="mr-2 h-4 w-4" /> },
     { name: "Os meus registos", path: "/my-reports", icon: <ClipboardList className="mr-2 h-4 w-4" />, requiresAuth: true },
     { name: "Perfil", path: "/profile", icon: <Settings className="mr-2 h-4 w-4" />, requiresAuth: true },
   ];
 
   // Add admin dashboard link for admin users
-  if (user && isAdmin()) {
+    if (user && isAdmin()) {
     navLinks.push({
-      name: "Admin Dashboard",
+      name: "Painel Admin",
       path: "/admin",
       icon: <User className="mr-2 h-4 w-4" />,
       requiresAuth: true,
@@ -84,11 +86,11 @@ const Navbar = () => {
             {user ? (
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Hello, {user.name}
+                  Olá, {user.name}
                 </span>
                 <Button variant="outline" onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Logout
+                  Sair
                 </Button>
               </div>
             ) : (
@@ -96,13 +98,13 @@ const Navbar = () => {
                 <Link to="/login">
                   <Button variant="outline">
                     <LogIn className="mr-2 h-4 w-4" />
-                    Login
+                      Entrar
                   </Button>
                 </Link>
                 <Link to="/signup">
                   <Button>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Sign Up
+                      Criar conta
                   </Button>
                 </Link>
               </>
@@ -115,7 +117,7 @@ const Navbar = () => {
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
                   <MenuIcon />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">Abrir menu</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right">
@@ -140,11 +142,11 @@ const Navbar = () => {
                   {user ? (
                     <>
                       <div className="border-t my-2 pt-2 text-sm text-gray-700 dark:text-gray-300">
-                        Signed in as: {user.name}
+                        Sessão iniciada como: {user.name}
                       </div>
                       <Button variant="outline" onClick={handleLogout} className="w-full">
                         <LogOut className="mr-2 h-4 w-4" />
-                        Logout
+                        Sair
                       </Button>
                     </>
                   ) : (
@@ -152,13 +154,13 @@ const Navbar = () => {
                       <Link to="/login" onClick={() => setIsSheetOpen(false)} className="w-full">
                         <Button variant="outline" className="w-full">
                           <LogIn className="mr-2 h-4 w-4" />
-                          Login
+                            Entrar
                         </Button>
                       </Link>
                       <Link to="/signup" onClick={() => setIsSheetOpen(false)} className="w-full">
                         <Button className="w-full">
                           <UserPlus className="mr-2 h-4 w-4" />
-                          Sign Up
+                            Criar conta
                         </Button>
                       </Link>
                     </>

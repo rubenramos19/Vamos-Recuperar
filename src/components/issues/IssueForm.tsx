@@ -32,7 +32,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Camera, X, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
-import { googleMapsLoader } from "@/lib/googleMapsLoader";
 import { GoogleVisionService as ImageVerificationService } from "@/services/googleVisionService";
 import {
   AlertDialog,
@@ -47,9 +46,8 @@ import {
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 
-// Google Maps imports
-import { Loader } from "@googlemaps/js-api-loader";
-import { GOOGLE_MAPS_API_KEY, GOOGLE_MAP_ID } from "@/config/constants";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 // Constants for validation
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -59,20 +57,19 @@ const MAX_ISSUES_PER_HOUR = 5;
 const formSchema = z.object({
   title: z
     .string()
-    .min(3, { message: "Title must be at least 3 characters." })
-    .max(200, { message: "Title must be less than 200 characters." }),
+    .min(3, { message: "O título deve ter pelo menos 3 caracteres." })
+    .max(200, { message: "O título deve ter menos de 200 caracteres." }),
   description: z
     .string()
-    .min(10, { message: "Description must be at least 10 characters." })
-    .max(2000, { message: "Description must be less than 2000 characters." }),
+    .min(10, { message: "A descrição deve ter pelo menos 10 caracteres." })
+    .max(2000, { message: "A descrição deve ter menos de 2000 caracteres." }),
   category: z.enum([
-    "road_damage",
-    "sanitation",
-    "lighting",
-    "graffiti",
-    "sidewalk",
-    "vegetation",
-    "other",
+    "limpeza",
+    "alimentacao",
+    "transporte",
+    "alojamento",
+    "reparacoes",
+    "outro",
   ]),
   location: z.object({
     latitude: z.number(),
@@ -82,10 +79,9 @@ const formSchema = z.object({
   photos: z
     .array(z.string())
     .max(MAX_IMAGES, {
-      message: `You can upload a maximum of ${MAX_IMAGES} photos.`,
+      message: `Podes enviar no máximo ${MAX_IMAGES} fotos.`,
     })
     .optional(),
-  isPublic: z.boolean().default(true),
 });
 
 interface IssueFormProps {
@@ -126,6 +122,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const autocomplete = useRef<any>(null);
+  const [searchText, setSearchText] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const suggestionTimeoutRef = useRef<any>(null);
 
   const [showLocationConfirm, setShowLocationConfirm] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{
@@ -139,10 +138,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
     defaultValues: defaultValues || {
       title: "",
       description: "",
-      category: "road_damage",
+      category: "limpeza",
       location: { latitude: 0, longitude: 0 },
       photos: [],
-      isPublic: true,
     },
     mode: "onChange",
   });
@@ -157,9 +155,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
     if (!description || description.length < 10) {
       toast({
         variant: "destructive",
-        title: "Description Required",
-        description:
-          "Please provide a detailed description before uploading photos for verification.",
+        title: "Descrição necessária",
+        description: "Por favor fornece uma descrição detalhada antes de enviar fotos para verificação.",
       });
       return;
     }
@@ -167,8 +164,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
     if (photos.length >= MAX_IMAGES) {
       toast({
         variant: "destructive",
-        title: "Maximum Photos Reached",
-        description: `You can only upload up to ${MAX_IMAGES} photos per issue.`,
+        title: "Máximo de fotos atingido",
+        description: `Só podes enviar até ${MAX_IMAGES} fotos por report.`,
       });
       return;
     }
@@ -179,8 +176,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
     if (oversizedFiles.length > 0) {
       toast({
         variant: "destructive",
-        title: "File Too Large",
-        description: `Each image must be less than 5MB. ${oversizedFiles.length} file(s) exceeded this limit.`,
+        title: "Ficheiro muito grande",
+        description: `Cada imagem deve ter menos de 5MB. ${oversizedFiles.length} ficheiro(s) excederam este limite.`,
       });
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
@@ -202,7 +199,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
           let verification = {
             isValid: true,
             confidence: 100,
-            reason: "Verification disabled",
+            reason: "Verificação desativada",
           };
 
           // Se quiseres reativar no futuro:
@@ -221,23 +218,21 @@ const IssueForm: React.FC<IssueFormProps> = ({
             });
 
             toast({
-              title: "Image Added",
-              description: verification.reason || "Image added successfully.",
+              title: "Imagem adicionada",
+              description: verification.reason || "Imagem adicionada com sucesso.",
             });
           } else {
             if (fileInputRef.current) fileInputRef.current.value = "";
             toast({
               variant: "destructive",
-              title: "Irrelevant image detected",
-              description:
-                verification.reason ||
-                "The uploaded image does not match your issue description.",
+              title: "Imagem irrelevante",
+              description: verification.reason || "A imagem enviada não corresponde à descrição.",
               action: (
                 <ToastAction
                   altText="Re-upload"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  Re-upload
+                  Re-enviar
                 </ToastAction>
               ),
             });
@@ -248,14 +243,14 @@ const IssueForm: React.FC<IssueFormProps> = ({
           if (fileInputRef.current) fileInputRef.current.value = "";
           toast({
             variant: "destructive",
-            title: "Verification unavailable",
-            description: "Could not verify the image. Please try uploading again.",
+            title: "Verificação indisponível",
+            description: "Não foi possível verificar a imagem. Por favor tenta novamente.",
             action: (
               <ToastAction
                 altText="Re-upload"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Re-upload
+                Re-enviar
               </ToastAction>
             ),
           });
@@ -294,8 +289,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
     if (!navigator.geolocation) {
       toast({
         variant: "destructive",
-        title: "Geolocation Not Supported",
-        description: "Your browser does not support geolocation.",
+        title: "Geolocalização não suportada",
+        description: "O teu browser não suporta geolocalização.",
       });
       return;
     }
@@ -314,8 +309,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
         setIsLoadingLocation(false);
         toast({
           variant: "destructive",
-          title: "Location Access Denied",
-          description: "Please enable location permissions to use this feature.",
+          title: "Acesso à localização negado",
+          description: "Ativa as permissões de localização para usar esta funcionalidade.",
         });
       }
     );
@@ -331,149 +326,103 @@ const IssueForm: React.FC<IssueFormProps> = ({
     form.setValue("location.longitude", longitude);
     form.setValue("location.address", "Current Location");
 
-    map.current.panTo({ lat: latitude, lng: longitude });
-    map.current.setZoom(16);
-
-    const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
-      "marker"
-    )) as any;
-
-    if (map.current.currentMarker) map.current.currentMarker.setMap(null);
-
-    map.current.currentMarker = new AdvancedMarkerElement({
-      map: map.current,
-      position: { lat: latitude, lng: longitude },
-      title: "Current Location",
-    });
+    try {
+      if (map.current.currentMarker) {
+        try { map.current.removeLayer(map.current.currentMarker); } catch {}
+        map.current.currentMarker = null;
+      }
+      const marker = L.circleMarker([latitude, longitude], { radius: 6, color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.9 });
+      marker.addTo(map.current);
+      map.current.currentMarker = marker;
+      map.current.setView([latitude, longitude], 16);
+    } catch (err) {
+      // ignore
+    }
 
     setShowLocationConfirm(false);
-    toast({
-      title: "Location Set",
-      description: "Your current location has been set as the issue location.",
-    });
+    toast({ title: "Local definido", description: "A tua localização atual foi definida como local do problema." });
   };
 
   useEffect(() => {
     const initializeMap = async () => {
-      if (!GOOGLE_MAPS_API_KEY || !mapContainer.current) return;
+      if (!mapContainer.current) return;
 
       try {
-        const { Map } = (await googleMapsLoader.importLibrary("maps")) as any;
-        const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
-          "marker"
-        )) as any;
-        const { Autocomplete } = (await googleMapsLoader.importLibrary(
-          "places"
-        )) as any;
+        const center: [number, number] = [39.744, -8.807];
+        const m = L.map(mapContainer.current).setView(center, 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(m);
 
-        // Leiria center
-        const center = { lat: 39.744, lng: -8.807 };
-
-        map.current = new Map(mapContainer.current, {
-          center,
-          zoom: 13,
-          mapId: GOOGLE_MAP_ID,
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-        });
-
+        map.current = m;
         setMapLoaded(true);
 
-        if (searchInputRef.current) {
-          autocomplete.current = new Autocomplete(searchInputRef.current, {
-            types: ["geocode"],
-            fields: ["place_id", "geometry", "name", "formatted_address"],
-          });
-
-          autocomplete.current.addListener("place_changed", () => {
-            const place = autocomplete.current.getPlace();
-
-            if (place.geometry && place.geometry.location) {
-              const lat = place.geometry.location.lat();
-              const lng = place.geometry.location.lng();
-
-              const newLocation = {
-                latitude: lat,
-                longitude: lng,
-                address:
-                  place.formatted_address || place.name || "Selected Location",
-              };
-
-              setLocation(newLocation);
-              form.setValue("location.latitude", lat);
-              form.setValue("location.longitude", lng);
-              form.setValue("location.address", newLocation.address);
-
-              map.current.panTo({ lat, lng });
-              map.current.setZoom(15);
-
-              if (map.current.currentMarker) map.current.currentMarker.setMap(null);
-
-              map.current.currentMarker = new AdvancedMarkerElement({
-                map: map.current,
-                position: { lat, lng },
-                title: newLocation.address,
-              });
-            }
-          });
-        }
-
-        map.current.addListener("click", (e: any) => {
-          const lat = e.latLng.lat();
-          const lng = e.latLng.lng();
+        m.on("click", (e: any) => {
+          const lat = e.latlng.lat;
+          const lng = e.latlng.lng;
 
           setLocation({ latitude: lat, longitude: lng });
           form.setValue("location.latitude", lat);
           form.setValue("location.longitude", lng);
 
-          if (map.current.currentMarker) map.current.currentMarker.setMap(null);
+          if (map.current.currentMarker) {
+            try { map.current.removeLayer(map.current.currentMarker); } catch {}
+            map.current.currentMarker = null;
+          }
 
-          map.current.currentMarker = new AdvancedMarkerElement({
-            map: map.current,
-            position: { lat, lng },
-            title: "Selected Location",
-          });
+          const marker = L.circleMarker([lat, lng], { radius: 6, color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.9 }).addTo(map.current);
+          map.current.currentMarker = marker;
         });
       } catch (error) {
-        logger.error("Error initializing Google Maps:", error);
+        logger.error("Error initializing Leaflet map:", error);
       }
     };
 
     initializeMap();
 
     return () => {
-      if (map.current?.currentMarker) map.current.currentMarker.setMap(null);
+      try { if (map.current?.currentMarker) { map.current.removeLayer(map.current.currentMarker); } } catch {}
+      try { if (map.current) { map.current.remove(); map.current = null; } } catch {}
     };
   }, [form]);
 
   useEffect(() => {
     const updateMapLocation = async () => {
-      if (defaultValues && map.current && mapLoaded && GOOGLE_MAPS_API_KEY) {
+      if (defaultValues && map.current && mapLoaded) {
         const { latitude, longitude } = defaultValues.location;
         setLocation({ latitude, longitude });
 
-        const { AdvancedMarkerElement } = (await googleMapsLoader.importLibrary(
-          "marker"
-        )) as any;
-
-        if (map.current.currentMarker) map.current.currentMarker.setMap(null);
-
-        map.current.panTo({ lat: latitude, lng: longitude });
-        map.current.setZoom(15);
-
-        map.current.currentMarker = new AdvancedMarkerElement({
-          map: map.current,
-          position: { lat: latitude, lng: longitude },
-          title: "Issue Location",
-        });
+        try {
+          if (map.current.currentMarker) { map.current.removeLayer(map.current.currentMarker); map.current.currentMarker = null; }
+          const marker = L.circleMarker([latitude, longitude], { radius: 6, color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.9 }).addTo(map.current);
+          map.current.currentMarker = marker;
+          map.current.setView([latitude, longitude], 15);
+        } catch (err) {
+          // ignore
+        }
       }
     };
 
     updateMapLocation();
   }, [defaultValues, mapLoaded]);
+
+  // Nominatim suggestions for searchText
+  useEffect(() => {
+    if (!searchText) { setSuggestions([]); return; }
+    if (suggestionTimeoutRef.current) clearTimeout(suggestionTimeoutRef.current);
+    suggestionTimeoutRef.current = setTimeout(async () => {
+      try {
+        const q = encodeURIComponent(searchText + ", Portugal");
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=pt&q=${q}`;
+        const res = await fetch(url, { headers: { "User-Agent": "leiria-resolve-app" } });
+        const data = await res.json();
+        setSuggestions(data || []);
+      } catch (err) {
+        setSuggestions([]);
+      }
+    }, 300);
+  }, [searchText]);
+
 
   async function onSubmitHandler(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -529,20 +478,20 @@ const IssueForm: React.FC<IssueFormProps> = ({
           address: values.location.address || "Sem morada",
         },
         photos,
-        isPublic: values.isPublic, // ✅ respeita o switch
+          isPublic: values.isPublic ?? true,
       };
 
       if (issueId) {
         await updateIssue(issueId, issueData);
         toast({
-          title: "Issue Updated",
-          description: "Your issue has been updated successfully.",
+          title: "Report atualizado",
+          description: "O teu report foi atualizado com sucesso.",
         });
       } else {
         await addIssue(issueData);
         toast({
-          title: "Issue Reported",
-          description: "Your issue has been reported successfully.",
+          title: "Report enviado",
+          description: "O teu report foi enviado com sucesso.",
         });
       }
 
@@ -554,8 +503,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
       logger.error("Error submitting issue:", error);
       toast({
         variant: "destructive",
-        title: "Error Reporting Issue",
-        description: error?.message || "Failed to report the issue. Please try again.",
+        title: "Erro ao reportar",
+        description: error?.message || "Falha ao enviar o report. Por favor tenta novamente.",
       });
     } finally {
       setIsSubmitting(false);
@@ -565,7 +514,7 @@ const IssueForm: React.FC<IssueFormProps> = ({
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{issueId ? "Edit Issue" : "Report an Issue"}</CardTitle>
+        <CardTitle>{issueId ? "Editar report" : "Reportar um problema"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -575,9 +524,9 @@ const IssueForm: React.FC<IssueFormProps> = ({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>Título</FormLabel>
                   <FormControl>
-                    <Input placeholder="A brief title for the issue" {...field} />
+                    <Input placeholder="Título (ex.: Preciso de ajuda a limpar garagem)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -589,10 +538,10 @@ const IssueForm: React.FC<IssueFormProps> = ({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Describe the issue in detail"
+                      placeholder="Detalhes (o que aconteceu / o que consegues fazer / horários / quantas pessoas / etc.)"
                       className="resize-none"
                       {...field}
                     />
@@ -607,23 +556,24 @@ const IssueForm: React.FC<IssueFormProps> = ({
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="road_damage">Road Damage</SelectItem>
-                      <SelectItem value="sanitation">Sanitation</SelectItem>
-                      <SelectItem value="lighting">Lighting</SelectItem>
-                      <SelectItem value="graffiti">Graffiti</SelectItem>
-                      <SelectItem value="sidewalk">Sidewalk</SelectItem>
-                      <SelectItem value="vegetation">Vegetation</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Categoria</FormLabel>
+                  <div className="relative z-50">
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleciona uma categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="limpeza">Limpeza</SelectItem>
+                        <SelectItem value="alimentacao">Alimentação</SelectItem>
+                        <SelectItem value="transporte">Transporte</SelectItem>
+                        <SelectItem value="alojamento">Alojamento</SelectItem>
+                        <SelectItem value="reparacoes">Reparações</SelectItem>
+                        <SelectItem value="outro">Outro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -631,18 +581,51 @@ const IssueForm: React.FC<IssueFormProps> = ({
 
             {/* Map Location Selection */}
             <div className="w-full">
-              <Label>Select Location on Map</Label>
+              <Label>Selecionar local no mapa</Label>
 
               <div className="mb-4 space-y-2">
                 <Input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search for a location..."
+                  placeholder="Pesquisar local..."
                   className="w-full"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
                 />
+                {suggestions.length > 0 && (
+                  <ul className="border rounded mt-1 max-h-40 overflow-auto bg-white relative z-50">
+                    {suggestions.map((s, idx) => (
+                      <li
+                        key={s.place_id || idx}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          const lat = parseFloat(s.lat);
+                          const lon = parseFloat(s.lon);
+                          const addr = s.display_name || s.description || "";
+                          setSearchText(addr);
+                          setLocation({ latitude: lat, longitude: lon, address: addr });
+                          form.setValue("location.latitude", lat);
+                          form.setValue("location.longitude", lon);
+                          form.setValue("location.address", addr);
+                          setSuggestions([]);
+                          try {
+                            if (map.current.currentMarker) { map.current.removeLayer(map.current.currentMarker); map.current.currentMarker = null; }
+                            const marker = L.circleMarker([lat, lon], { radius: 6, color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.9 }).addTo(map.current);
+                            map.current.currentMarker = marker;
+                            map.current.setView([lat, lon], 15);
+                          } catch (err) {
+                            // ignore
+                          }
+                        }}
+                      >
+                        {s.display_name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    Type a location name or address, then click on the map to fine-tune
+                    Escreve o nome do local ou morada, depois clica no mapa para ajustar
                   </p>
                   <Button
                     type="button"
@@ -653,19 +636,19 @@ const IssueForm: React.FC<IssueFormProps> = ({
                     className="flex items-center gap-2 shrink-0"
                   >
                     <MapPin className="h-4 w-4" />
-                    {isLoadingLocation ? "Getting Location..." : "Use My Location"}
+                    {isLoadingLocation ? "A obter localização..." : "Usar a minha localização"}
                   </Button>
                 </div>
               </div>
 
-              <div ref={mapContainer} className="h-64 rounded border" />
+              <div ref={mapContainer} className="h-64 rounded border z-0 relative" />
             </div>
 
             {/* Photo Upload Section */}
             <div>
-              <Label>Photos (Optional - Max 5, 5MB each)</Label>
+              <Label>Fotos (Opcional - Máx 5, 5MB cada)</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Photos will be automatically verified against your description to ensure relevance.
+                As fotos serão verificadas automaticamente relativamente à descrição.
               </p>
 
               <div className="mt-2">
@@ -680,8 +663,8 @@ const IssueForm: React.FC<IssueFormProps> = ({
                     <Camera className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
                       {isVerifying
-                        ? "Verifying images..."
-                        : `Click to upload photos (${photos.length}/${MAX_IMAGES})`}
+                        ? "A verificar imagens..."
+                        : `Clica para enviar fotos (${photos.length}/${MAX_IMAGES})`}
                     </p>
                   </div>
                 )}
@@ -708,12 +691,12 @@ const IssueForm: React.FC<IssueFormProps> = ({
                             {photoVerifications[index].isValid ? (
                               <>
                                 <CheckCircle className="h-3 w-3" />
-                                Verified
+                                Verificado
                               </>
                             ) : (
                               <>
                                 <AlertTriangle className="h-3 w-3" />
-                                Failed
+                                Falhou
                               </>
                             )}
                           </div>
@@ -748,24 +731,10 @@ const IssueForm: React.FC<IssueFormProps> = ({
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="isPublic"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Public Report</FormLabel>
-                    <FormDescription>Do you want this report to be public?</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            
 
             <Button type="submit" disabled={isSubmitting || isVerifying}>
-              {isSubmitting ? "Submitting..." : isVerifying ? "Verifying Images..." : "Submit"}
+              {isSubmitting ? "A enviar..." : isVerifying ? "A verificar imagens..." : "Enviar"}
             </Button>
           </form>
         </Form>
@@ -774,21 +743,21 @@ const IssueForm: React.FC<IssueFormProps> = ({
       <AlertDialog open={showLocationConfirm} onOpenChange={setShowLocationConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Use Current Location?</AlertDialogTitle>
+            <AlertDialogTitle>Usar localização atual?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want to set your current location as the location of this issue?
+              Desejas definir a tua localização atual como o local do problema?
               {currentPosition && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Coordinates: {currentPosition.latitude.toFixed(6)},{" "}
+                  Coordenadas: {currentPosition.latitude.toFixed(6)},{" "}
                   {currentPosition.longitude.toFixed(6)}
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmUseCurrentLocation}>
-              Yes, Use This Location
+              Sim, usar esta localização
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

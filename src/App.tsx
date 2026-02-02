@@ -21,11 +21,13 @@ import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
+import Alerts from "./pages/Alerts";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PedirAjuda from "./pages/PedirAjuda";
 import QueroAjudar from "./pages/QueroAjudar";
+import Ajudar from "./pages/Ajudar";
 
 
 
@@ -108,6 +110,10 @@ const App = () => (
     </ProtectedRoute>
   }
 />
+
+  {/* Ajudar page (public) */}
+  <Route path="/ajudar" element={<Ajudar />} />
+  <Route path="/alerts" element={<Alerts />} />
 
   {/* Pública (se quiseres, podes deixar pública) */}
   <Route path="/issue/:id" element={<IssuePage />} />

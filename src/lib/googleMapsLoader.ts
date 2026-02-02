@@ -1,9 +1,7 @@
-import { Loader } from '@googlemaps/js-api-loader';
-
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-export const googleMapsLoader = new Loader({
-  apiKey: GOOGLE_MAPS_API_KEY,
-  version: "weekly",
-  libraries: ["marker", "places"],
-});
+// Stubbed loader to keep legacy imports safe during migration to Leaflet.
+// All mapping functionality has been migrated to Leaflet.
+export const googleMapsLoader = {
+  async importLibrary(_: string) {
+    return {};
+  },
+};

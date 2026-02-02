@@ -4,13 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import pt from "date-fns/locale/pt";
 import {
   MapPin,
   Calendar,
   User,
   Clock,
-  Edit,
-  Trash,
   CheckCircle2,
   Loader2,
   AlertCircle,
@@ -18,18 +17,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+// navigate not needed in popup anymore
 import PhotoGalleryDialog from "@/components/issues/PhotoGalleryDialog";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +29,8 @@ const LEIRIA_ZOOM_DELTA = 0.002;
 
 const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
   const { user, isAdmin } = useAuth();
-  const { updateIssue, deleteIssue } = useIssues();
+  const { updateIssue } = useIssues();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const photos: string[] = issue?.photos ?? [];
 
@@ -55,8 +42,8 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
     setGalleryOpen(true);
   };
 
-  const formatDate = (dateString: string) => format(new Date(dateString), "PPP");
-  const formatTime = (dateString: string) => format(new Date(dateString), "p");
+  const formatDate = (dateString: string) => format(new Date(dateString), "PPP", { locale: pt });
+  const formatTime = (dateString: string) => format(new Date(dateString), "p", { locale: pt });
 
   const formatCategory = (category: string) =>
     category.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -66,19 +53,19 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
       case "open":
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" /> Open
+            <AlertCircle className="h-3 w-3" /> Aberto
           </Badge>
         );
       case "in_progress":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" /> In Progress
+            <Loader2 className="h-3 w-3 animate-spin" /> Em progresso
           </Badge>
         );
       case "resolved":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> Resolved
+            <CheckCircle2 className="h-3 w-3" /> Resolvido
           </Badge>
         );
       default:
@@ -86,21 +73,18 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
     }
   };
 
-  const canEdit = user && (isAdmin() || user.id === issue.reporterId);
+  // editing/deleting handled elsewhere; hide edit/delete from popup
+  const canEdit = false;
 
   const handleStatusUpdate = (newStatus: IssueStatus) => {
     updateIssue(issue.id, { status: newStatus });
     toast({
-      title: "Status Updated",
-      description: `Issue status changed to ${newStatus.replace("_", " ")}`,
+      title: "Estado atualizado",
+      description: `Estado alterado para ${newStatus.replace("_", " ")}`,
     });
   };
 
-  const handleDelete = () => {
-    deleteIssue(issue.id);
-    toast({ title: "Issue Deleted", description: "The issue has been deleted successfully" });
-    navigate("/");
-  };
+  // delete/edit removed from popup by request
 
   const locationLabel =
     issue.location.address?.trim()
@@ -317,39 +301,7 @@ const IssueDetail: React.FC<IssueDetailProps> = ({ issue }) => {
       )}
 
       {/* Edit/Delete */}
-      {canEdit && (
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => navigate(`/edit-issue/${issue.id}`)}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="flex-1">
-                <Trash className="h-4 w-4 mr-2" />
-                Apagar
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Tens a certeza?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Isto vai apagar o reporte permanentemente.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Apagar</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
+      {/* Edit/Delete removed from popup per user request */}
     </div>
   );
 };
