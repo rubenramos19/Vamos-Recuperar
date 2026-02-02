@@ -33,4 +33,4 @@ Este projeto foi desenvolvido com:
 1. Clonar o repositório:
 
 ```sh
-git clone <URL_DO_REPOSITORIO>
+git clone https://github.com/rubenramos19/Vamos-Recuperar.git
