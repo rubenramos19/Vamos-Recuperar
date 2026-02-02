@@ -23,6 +23,11 @@ import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PedirAjuda from "./pages/PedirAjuda";
+import QueroAjudar from "./pages/QueroAjudar";
+
+
 
 const queryClient = new QueryClient();
 
@@ -38,22 +43,81 @@ const App = () => (
               <div className="flex flex-col min-h-screen">
                 <Navbar />
                 <main className="flex-grow">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/map" element={<Map />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/report" element={<Report />} />
-                    <Route path="/edit-issue/:id" element={<EditIssue />} />
-                    <Route path="/issue/:id" element={<IssuePage />} />
-                    <Route path="/my-reports" element={<MyReports />} />
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                 <Routes>
+  <Route path="/" element={<Index />} />
+  <Route path="/map" element={<Map />} />
+
+  <Route path="/login" element={<Login />} />
+  <Route path="/signup" element={<Signup />} />
+
+  {/* Rotas privadas (precisa login) */}
+  <Route
+    path="/report"
+    element={
+      <ProtectedRoute>
+        <Report />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/edit-issue/:id"
+    element={
+      <ProtectedRoute>
+        <EditIssue />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/my-reports"
+    element={
+      <ProtectedRoute>
+        <MyReports />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/admin"
+    element={
+      <ProtectedRoute>
+        <Admin />
+      </ProtectedRoute>
+    }
+  />
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+<Route
+  path="/pedir-ajuda"
+  element={
+    <ProtectedRoute>
+      <PedirAjuda />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/quero-ajudar"
+  element={
+    <ProtectedRoute>
+      <QueroAjudar />
+    </ProtectedRoute>
+  }
+/>
+
+  {/* Pública (se quiseres, podes deixar pública) */}
+  <Route path="/issue/:id" element={<IssuePage />} />
+
+  <Route path="/about" element={<About />} />
+  <Route path="/privacy" element={<Privacy />} />
+  <Route path="/terms" element={<Terms />} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
+
                 </main>
                 <Footer />
               </div>

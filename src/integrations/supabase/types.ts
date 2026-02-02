@@ -14,6 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      help_requests: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          category: string
+          title: string
+          description: string | null
+          location_text: string | null
+          urgency: string
+          status: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          category: string
+          title: string
+          description?: string | null
+          location_text?: string | null
+          urgency?: string
+          status?: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          category?: string
+          title?: string
+          description?: string | null
+          location_text?: string | null
+          urgency?: string
+          status?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+
       issues: {
         Row: {
           category: string

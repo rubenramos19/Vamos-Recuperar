@@ -1,7 +1,7 @@
 import React from "react";
 import IssueForm from "@/components/issues/IssueForm";
 import { useNavigate } from "react-router-dom";
-import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
+import EmailVerificationBanner from "@/components/auth/EmailVerificationBanner";
 
 const Report = () => {
   const navigate = useNavigate();

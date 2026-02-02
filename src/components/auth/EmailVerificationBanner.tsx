@@ -1,49 +1,25 @@
-import React from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Mail, AlertCircle } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-export const EmailVerificationBanner: React.FC = () => {
-  const { user, resendVerificationEmail } = useAuth();
-  const [isSending, setIsSending] = React.useState(false);
+export default function EmailVerificationBanner() {
+  const [show, setShow] = useState(false);
 
-  if (!user || user.emailVerified) {
-    return null;
-  }
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) return setShow(false);
 
-  const handleResend = async () => {
-    setIsSending(true);
-    try {
-      await resendVerificationEmail();
-    } finally {
-      setIsSending(false);
-    }
-  };
+      // No Supabase, email_confirmed_at pode existir dependendo da config
+      const confirmed = Boolean((user as any).email_confirmed_at);
+      setShow(!confirmed);
+    });
+  }, []);
+
+  if (!show) return null;
 
   return (
-    <Alert variant="destructive" className="mb-6">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle className="flex items-center justify-between">
-        <span>Email Verification Required</span>
-      </AlertTitle>
-      <AlertDescription className="mt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm">
-            Please verify your email address to report issues. Check your inbox for the verification link.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResend}
-            disabled={isSending}
-            className="shrink-0"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            {isSending ? "Sending..." : "Resend Email"}
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
+    <div className="mb-4 border rounded p-3 text-sm">
+      ⚠️ Confirma o teu email para ativar a conta. Verifica a caixa de entrada e o spam.
+    </div>
   );
-};
+}
